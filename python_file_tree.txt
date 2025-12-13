@@ -1,0 +1,3096 @@
+================================================================================
+Python 프로젝트 분석 결과
+생성 시간: 2025-10-21 16:47:22
+================================================================================
+
+(1) 프로젝트 파일 구조
+--------------------------------------------------------------------------------
+
+E:\CiTRUS
+│   ├── app.py
+│   ├── main.py
+├── [models]
+│   │   ├── __init__.py
+├── [services]
+│   │   ├── __init__.py
+│   │   ├── auth_service.py
+├── [tabs]
+│   │   ├── __init__.py
+│   ├── [easel]
+│   │   │   ├── __init__.py
+│   │   │   ├── canvas_controller.py
+│   │   │   ├── easel_controller.py
+│   │   │   ├── easel_tab_view.py
+│   │   │   ├── event_handler.py
+│   │   ├── [components]
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── layer_list.py
+│   │   ├── [models]
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── layer.py
+│   │   ├── [services]
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── font_service.py
+│   │   │   │   ├── image_service.py
+│   │   │   │   ├── project_service.py
+│   ├── [lab]
+│   │   │   ├── __init__.py
+│   │   │   ├── lab_controller.py
+│   │   │   ├── lab_tab_view.py
+│   ├── [stitch]
+│   │   │   ├── __init__.py
+│   │   │   ├── stitch_controller.py
+│   │   │   ├── stitch_tab_view.py
+├── [ui]
+│   │   ├── __init__.py
+│   │   ├── dialogs.py
+│   │   ├── login_window.py
+│   │   ├── theme.py
+
+--------------------------------------------------------------------------------
+총 Python 파일 개수: 29개
+총 디렉토리 개수: 11개
+※ 이 스크립트 파일(create_py_tree.py)은 결과에서 제외되었습니다.
+
+
+================================================================================
+(2) 각 파일의 코드 내용
+================================================================================
+
+(2) app.py
+--------------------------------------------------------------------------------
+# File path: app.py (replace the file's contents completely with this code - No ttkbootstrap)
+
+import tkinter as tk
+import tkinter.ttk as ttk # [MODIFIED] 표준 ttk 사용 (Notebook용)
+# from ttkbootstrap.constants import * # 더 이상 필요 없음
+
+# [ ★★★★★ NEW: 테마 임포트 ★★★★★ ]
+from ui.theme import Colors
+
+# --- Corrected import path for Easel tab view ---
+from tabs.easel.easel_tab_view import EaselTabView
+# --- End of correction ---
+
+class App(tk.Frame): # [MODIFIED] tk.Frame 상속
+    def __init__(self, parent, *args, **kwargs):
+        # [MODIFIED] 흰색 배경 적용 (tk 옵션 사용)
+        super().__init__(parent, *args, bg=Colors.WHITE, **kwargs) # Use Colors.WHITE
+        self.pack(fill=tk.BOTH, expand=tk.YES)
+        self._build_layout()
+
+    def _build_layout(self):
+        # 1. Header Frame
+        header_frame = tk.Frame(self, bg=Colors.WHITE, padx=10, pady=10) # Use Colors.WHITE
+        header_frame.pack(side=tk.TOP, fill=tk.X, pady=(0, 0))
+        tk.Label(header_frame, text="CiTRUS", font=("", 16, "bold"),
+                 bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(anchor=tk.W) # Use Colors
+
+        # 2. Main Area Frame (space for tabs)
+        main_area_frame = tk.Frame(self, bg=Colors.WHITE) # Use Colors.WHITE
+        main_area_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=0)
+
+        # 3. Create Notebook (Tab manager)
+        # 스타일은 main.py에서 ttk.Style()로 설정됨
+        notebook = ttk.Notebook(main_area_frame)
+        notebook.pack(fill=tk.BOTH, expand=True)
+
+        # 4. Create and add Easel tab
+        easel_tab = EaselTabView(notebook)
+        notebook.add(easel_tab, text="🎨 Easel")
+
+        # --- Location for adding Stitch, Lab tabs in the future ---
+        # stitch_tab = StitchTabView(notebook)
+        # notebook.add(stitch_tab, text="🧵 Stitch")
+        # lab_tab = LabTabView(notebook)
+        # notebook.add(lab_tab, text="🔬 Lab")
+        # --- ------------------------------------------------- ---
+
+        # 5. Footer Frame
+        under_frame = tk.Frame(self, bg=Colors.WHITE) # Use Colors.WHITE
+        under_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10)
+
+        separator = tk.Frame(under_frame, height=1, bg=Colors.GREY) # Use Colors.GREY
+        separator.pack(fill=tk.X, pady=(0,5))
+
+        tk.Label(under_frame, text="CiTRUS Made By CODE8251",
+                 bg=Colors.WHITE, fg=Colors.GREY, anchor=tk.E).pack(fill=tk.X) # Use Colors
+
+================================================================================
+
+(3) main.py
+--------------------------------------------------------------------------------
+# File path: main.py (Final modified version - No ttkbootstrap)
+
+import sys
+import os
+import subprocess
+import importlib.util
+from tkinter import messagebox
+# [MODIFIED] ttkbootstrap import 제거
+# import ttkbootstrap as ttk
+# from ttkbootstrap.constants import *
+import tkinter as tk
+import tkinter.ttk as ttk # [NEW] 표준 ttk 모듈 사용 (Notebook 등)
+import traceback
+
+# [ ★★★★★ NEW: 테마 임포트 ★★★★★ ]
+from ui.theme import Colors
+
+# --- Add project root and services path (유지) ---
+application_path = os.path.dirname(os.path.abspath(__file__))
+if application_path not in sys.path:
+    sys.path.insert(0, application_path)
+    print(f"DEBUG: Added to sys.path: {application_path}")
+else:
+    print(f"DEBUG: Already in sys.path: {application_path}")
+services_path = os.path.join(application_path, "services")
+if os.path.isdir(services_path) and services_path not in sys.path:
+    sys.path.insert(0, services_path)
+    print(f"DEBUG: Added to sys.path (services): {services_path}")
+print(f"DEBUG: Current sys.path: {sys.path}")
+# --- End of path addition ---
+
+# --- Debugging code (유지) ---
+try:
+    import services.auth_service
+    print("DEBUG: Direct import of services.auth_service successful!")
+except ImportError as e:
+    print(f"DEBUG: Direct import of services.auth_service failed: {e}")
+    print(f"DEBUG: sys.path at the time of import failure: {sys.path}")
+# --- End of debugging code ---
+
+# --- Existing auth_service import and initialization (유지) ---
+try:
+    from services.auth_service import initialize_database
+    initialize_database()
+except ImportError:
+    print("Warning: Could not find services/auth_service.py.")
+except Exception as e:
+    print(f"Error during DB initialization: {e}")
+# --- End of initialization ---
+
+# --- Library installation function (유지) ---
+def install_package(package_name, output_func=print):
+    """Installs a package using pip and prints the result to output_func."""
+    try:
+        output_func(f"Attempting to install '{package_name}'...")
+        result = subprocess.check_output(
+            [sys.executable, "-m", "pip", "install", package_name],
+            stderr=subprocess.STDOUT, universal_newlines=True
+        )
+        output_func(f"Successfully installed '{package_name}'!\n{result}")
+        return True
+    except subprocess.CalledProcessError as e:
+        output_func(f"Failed to install '{package_name}':\n{e.output}")
+        messagebox.showerror("Installation Error", f"Error while installing '{package_name}' library...\n\n{e.output}\n\n...")
+        return False
+    except Exception as e:
+        output_func(f"An unexpected error occurred during installation of '{package_name}': {e}")
+        messagebox.showerror("Installation Error", f"An unexpected error occurred while installing '{package_name}' library...\n\n{e}\n\n...")
+        return False
+
+# --- Dependency check function (유지) ---
+def check_dependencies(output_func=print):
+    """Checks for required libraries and returns the results as a dictionary."""
+    # [MODIFIED] ttkbootstrap 제거
+    required = {"PIL": "Pillow", "supabase": "supabase-py"}
+    optional = {"tkinterdnd2": "tkinterdnd2", "rembg": "rembg"}
+    missing_required = []
+    missing_optional = []
+    dnd_spec = None
+
+    output_func("--- Starting library check ---")
+    for import_name, install_name in required.items():
+        output_func(f"Checking '{install_name}'...")
+        spec = importlib.util.find_spec(import_name)
+        if spec is None:
+            output_func(f"-> '{install_name}' library is not installed.")
+            missing_required.append(install_name)
+        else:
+            output_func(f"-> '{install_name}' check complete.")
+
+    for import_name, install_name in optional.items():
+        output_func(f"Checking '{install_name}'...")
+        spec = importlib.util.find_spec(import_name)
+        if spec is None:
+            output_func(f"-> '{install_name}' library is not installed.")
+            missing_optional.append(install_name)
+        else:
+            output_func(f"-> '{install_name}' check complete.")
+            if import_name == "tkinterdnd2":
+                dnd_spec = spec
+
+    output_func("--- Library check finished ---")
+    return {'missing_required': missing_required, 'missing_optional': missing_optional, 'dnd_spec': dnd_spec}
+
+# --- Main app execution function ---
+def launch_main_app(root_window):
+    """Sets up and runs the main application window."""
+    print("[DEBUG] Launching main application window...")
+
+    # --- [ ★★★★★ 표준 ttk 스타일 커스터마이징 (Notebook용) ★★★★★ ] ---
+    print("[DEBUG] Applying custom colors using tkinter.ttk.Style...")
+    try:
+        # 표준 ttk 스타일 객체 생성
+        style = ttk.Style()
+
+        # --- [ ★★★★★ MODIFIED: 테마에서 색상 가져오기 ★★★★★ ] ---
+        # Notebook 스타일 설정
+        style.theme_use("clam") # 'clam' 테마가 커스터마이징 용이
+        style.configure("TNotebook", background=Colors.WHITE, borderwidth=1)
+        style.configure("TNotebook.Tab",
+                        background=Colors.GREY,          # 비활성 탭 배경
+                        foreground=Colors.WHITE,         # 비활성 탭 글씨
+                        padding=[10, 5], borderwidth=0,
+                        lightcolor=Colors.GREY, focusthickness=0,
+                        focuscolor=style.lookup("TNotebook.Tab", "background")) # 포커스 색 = 배경색
+
+        # Notebook 탭 상태별 스타일 설정
+        style.map("TNotebook.Tab",
+                  background=[("selected", Colors.MAIN_RED), # 선택 시 배경
+                              ("!selected", "hover", Colors.DARK_GREY)], # 호버 시 배경
+                  foreground=[("selected", Colors.WHITE)],   # 선택 시 글씨
+                  lightcolor=[("selected", Colors.MAIN_RED)]) # 선택 시 테두리 색상 강조 (미미함)
+        # --- [ ★★★★★ 수정 완료 ★★★★★ ] ---
+
+        # 메인 앱 전체 배경색 설정 (root_window 자체가 tk.Tk 이므로 config 사용)
+        root_window.config(bg=Colors.WHITE)
+        root_window.style = style # 참고용으로 저장
+        print(f"[DEBUG] Custom ttk styles applied.")
+
+    except Exception as e:
+        print(f"ERROR: Failed to apply custom ttk styles: {e}")
+        traceback.print_exc()
+        root_window.style = None
+        root_window.config(bg=Colors.WHITE) # 최소한 배경색은 흰색으로
+    # --- [ ★★★★★ 수정 완료 ★★★★★ ] ---
+
+    root_window.title("CiTRUS")
+    root_window.geometry("1400x900")
+    root_window.minsize(1200, 800)
+
+    print("[DEBUG] Importing App class...")
+    from app import App # app.py는 tk/ttk 위젯을 사용하도록 수정되어야 함
+    print("[DEBUG] Creating App instance...")
+    App(root_window) # root_window를 부모로 전달
+    print("[DEBUG] App instance created.")
+
+    root_window.deiconify()
+
+# --- Program entry point ---
+if __name__ == '__main__':
+    root = None
+    try:
+        print("[DEBUG] Starting __main__ block...")
+        print("[DEBUG] Checking dependencies before creating root...")
+        dnd_available = False
+        try:
+            results = check_dependencies(output_func=print)
+            if results['dnd_spec']: dnd_available = True
+            if results['missing_required']:
+                missing_str = ", ".join(results['missing_required'])
+                print(f"!!! Missing required libraries: {missing_str}")
+                messagebox.showerror("Cannot Run", f"Missing required libraries:\n{missing_str}\n\nPlease install with 'pip install {missing_str}'.")
+                sys.exit("Missing required libraries")
+        except Exception as e:
+            print(f"[WARN] Dependency check failed, proceeding anyway: {e}")
+
+        ROOT_WINDOW_TYPE = tk.Tk
+        if dnd_available:
+            try:
+                 from tkinterdnd2 import TkinterDnD
+                 ROOT_WINDOW_TYPE = TkinterDnD.Tk
+                 print("INFO: Using TkinterDnD.Tk")
+            except ImportError:
+                 print("ERROR: Failed to re-import tkinterdnd2. Using standard Tk.")
+
+        print("[DEBUG] Creating *SINGLE* root window...")
+        root = ROOT_WINDOW_TYPE()
+        root.withdraw() # 로그인 창 먼저 보이도록 숨김
+
+        print("[DEBUG] Importing LoginWindow...")
+        from ui.login_window import LoginWindow
+
+        print("[DEBUG] Creating LoginWindow instance...")
+        try:
+            login_window = LoginWindow(
+                parent=root, check_func=check_dependencies,
+                install_func=install_package, launch_func=launch_main_app
+            )
+            print("[DEBUG] LoginWindow instance created successfully.")
+        except Exception as login_init_error:
+            print(f"[ERROR] Failed to create LoginWindow instance: {login_init_error}")
+            traceback.print_exc()
+            messagebox.showerror("Initialization Error", f"Login window initialization error:\n{login_init_error}")
+            sys.exit("Login window initialization failed")
+
+        print("[DEBUG] Starting mainloop (Login window will show first)...")
+        root.mainloop()
+        print("[DEBUG] Mainloop finished.")
+
+    except Exception as e:
+        print(f"[ERROR] Unexpected error in main: {e}")
+        traceback.print_exc()
+        try: messagebox.showerror("Fatal Error", f"An error occurred during program execution:\n{e}")
+        except tk.TclError: pass
+        if root:
+            try: root.destroy()
+            except: pass
+        sys.exit("Program terminated abnormally")
+    finally:
+        print("[DEBUG] CiTRUS program exiting __main__ block.")
+
+================================================================================
+
+(4) models\__init__.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(5) services\__init__.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(6) services\auth_service.py
+--------------------------------------------------------------------------------
+from supabase import create_client, Client
+# --- 여기가 수정된 부분 ---
+# 내부 모듈/오류 직접 임포트 제거 (다시!)
+# --- 수정 끝 ---
+import os
+
+# --- Supabase URL/Key 설정 (기존과 동일) ---
+SUPABASE_URL = "https://fhqlmbmlcfpaizodrmxc.supabase.co" # <<< 본인 URL 확인!
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZocWxtYm1sY2ZwYWl6b2RybXhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3Mjk2MDcsImV4cCI6MjA3NjMwNTYwN30.AVLHGuiGHHBEW5TCXMeDar8y9N5GCsYewMbfZR1JGcM" # <<< 본인 Key 확인!
+# -----------------------------------------------
+
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    print(f"DEBUG: Supabase 클라이언트 초기화 성공. URL: {SUPABASE_URL}")
+except Exception as e:
+    print(f"DEBUG: Supabase 클라이언트 초기화 실패: {e}")
+    supabase = None
+
+def initialize_database():
+    if supabase is None:
+        print("오류: Supabase가 초기화되지 않았습니다. URL과 KEY를 확인하세요.")
+        return
+    print("DEBUG: Supabase 사용 중 (로컬 DB 초기화 건너뜀).")
+
+def create_user(name, username, email, password):
+    """
+    회원가입 처리: Supabase Auth에 사용자를 생성하고, profiles 테이블에 추가 정보를 저장합니다.
+    성공 시: True, 실패 시: (오류 메시지 문자열)
+    """
+    if supabase is None: return "Supabase 연결 실패"
+
+    user_id = None
+    try:
+        # 1. Supabase Auth에 이메일/비밀번호로 사용자 생성
+        user_response = supabase.auth.sign_up({
+            "email": email,
+            "password": password,
+            "options": {
+                "data": { "name": name }
+            }
+        })
+        user_id = user_response.user.id
+        print(f"DEBUG: Supabase Auth 사용자 생성 성공: {email} (ID: {user_id})")
+
+        # 2. profiles 테이블에 username, name, email 추가 (role은 DB 기본값 1 사용)
+        profile_data = supabase.table('profiles').insert({
+            'id': str(user_id),
+            'username': username,
+            'name': name,
+            'email': email
+        }).execute()
+
+        if profile_data.data:
+             print(f"DEBUG: Supabase profiles 테이블에 정보 추가 완료: {username}")
+        else:
+             print(f"경고: profiles 테이블 insert 후 반환 데이터 없음. {getattr(profile_data, 'error', 'N/A')}")
+
+        return True
+
+    # --- 오류 처리 방식 (Exception으로 통일) ---
+    except Exception as e:
+        err_msg = str(getattr(e, 'message', str(e))).lower()
+        print(f"DEBUG: 회원가입 중 오류 발생: {err_msg}") # 오류 메시지 직접 확인
+
+        # Auth 관련 오류 메시지 패턴 확인
+        if "user already exists" in err_msg or "already registered" in err_msg:
+             return "duplicate_email"
+        elif "valid email" in err_msg:
+            return "invalid_email"
+        elif "characters long" in err_msg or "password should be" in err_msg:
+             return "password_too_short"
+
+        # DB 관련 오류 메시지 패턴 확인 (Postgrest)
+        elif "duplicate key value violates unique constraint" in err_msg and "profiles_username_key" in err_msg:
+             if user_id: # 롤백 시도
+                 print(f"롤백 시도: Auth 사용자 삭제 {user_id}")
+                 try:
+                     # supabase.auth.admin.delete_user(user_id) # 관리자 권한 필요
+                     print("경고: Auth 사용자 롤백 실패 (관리자 권한 필요)")
+                 except Exception as admin_e:
+                     print(f"Auth 사용자 롤백 중 오류: {admin_e}")
+             return "duplicate_username"
+        elif "postgrest" in err_msg or "database" in err_msg:
+             return f"DB 오류: {e}"
+
+        # 기타 알 수 없는 오류
+        return f"알 수 없는 오류: {e}"
+    # --- 수정 끝 ---
+
+def check_user_login(username, password):
+    """
+    로그인 처리: username으로 email을 찾고, email/password로 로그인 후 role 숫자를 반환합니다.
+    성공 시: role 숫자 (e.g., 1, 2), 실패 시: None
+    """
+    if supabase is None: return None
+
+    try:
+        # 1. profiles 테이블에서 username으로 email과 role 조회
+        print(f"DEBUG: profiles 테이블에서 username '{username}' 조회 시도...")
+        profile_response = supabase.table('profiles').select('id, email, role').eq('username', username).execute()
+
+        if not profile_response.data:
+            print(f"DEBUG: 로그인 실패 (존재하지 않는 아이디: {username})")
+            return None # 아이디 없음
+
+        profile = profile_response.data[0]
+        user_id = profile['id']
+        email = profile['email']
+        role_number = profile['role']
+        print(f"DEBUG: 아이디 '{username}'에 해당하는 이메일 '{email}', 역할(숫자) '{role_number}' 찾음.")
+
+        # 2. 찾은 email과 입력된 password로 Supabase Auth 로그인 시도
+        print(f"DEBUG: Supabase Auth 로그인 시도 (이메일: {email})...")
+        session = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+
+        # 3. 로그인 성공 시 역할(role) 숫자 반환
+        print(f"DEBUG: Supabase 로그인 성공: {session.user.email}")
+        return role_number # 숫자 반환
+
+    # --- 오류 처리 방식 (Exception으로 통일) ---
+    except Exception as e:
+        err_msg = str(getattr(e, 'message', str(e))).lower()
+        print(f"DEBUG: 로그인 중 오류 발생: {err_msg}") # 오류 메시지 직접 확인
+
+        # Auth 관련 오류 메시지 패턴 확인 ("Invalid login credentials" 등)
+        if "invalid login credentials" in err_msg:
+            print("DEBUG: 로그인 실패 (Auth: 자격 증명 오류)")
+            return None
+        # DB 관련 오류 메시지 패턴 확인
+        elif "postgrest" in err_msg or "table" in err_msg or "database" in err_msg:
+            print(f"DEBUG: 로그인 실패 (DB 조회 오류)")
+            return None
+        # 기타 알 수 없는 오류
+        else:
+            print(f"DEBUG: 로그인 실패 (알 수 없는 오류)")
+            return None
+    # --- 수정 끝 ---
+
+================================================================================
+
+(7) tabs\__init__.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(8) tabs\easel\__init__.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(9) tabs\easel\canvas_controller.py
+--------------------------------------------------------------------------------
+import tkinter as tk
+from PIL import Image, ImageTk, ImageDraw, ImageFont # [ ★★★★★ 수정: ImageDraw 추가 ★★★★★ ]
+import math
+import os # 로고 경로 확인 위해 추가
+
+# --- import 경로 수정 ---
+from .models.layer import Layer, ImageLayer, TextLayer, ShapeLayer
+from .services.font_service import FontService
+# --- 수정 끝 ---
+
+class CanvasController:
+    """캔버스 위의 객체(레이어, 로고) 표시 및 상호작용 로직 관리"""
+    def __init__(self, canvas: tk.Canvas, controller):
+        self.canvas = canvas
+        self.controller = controller # EaselController 참조
+        self.canvas_objects = {} # { path: {id, type, tk_img, pil_for_display, rel_x, rel_y, angle, ...}, ... }
+        self.active_selection_path: str | None = None
+        self.fit_scale = 1.0 # 뷰포트에 맞추기 위한 스케일
+
+    def add_layer_to_canvas(self, layer: Layer):
+        """레이어를 캔버스에 추가 (기본 위치)"""
+        if layer.path in self.canvas_objects: # 이미 있으면 생성 방지
+            return
+
+        canvas_w, canvas_h = self.get_canvas_size()
+        center_x, center_y = canvas_w / 2, canvas_h / 2
+
+        # create_image는 이미지를 중앙 정렬하므로 중앙 좌표 사용
+        item_id = self.canvas.create_image(center_x, center_y, tags=("item", layer.path))
+
+        self.canvas_objects[layer.path] = {
+            'id': item_id,
+            'type': layer.type,
+            'tk_img': None,
+            'pil_for_display': None, # 현재 줌 레벨에 맞게 리사이즈된 PIL 이미지 (투명도 체크용)
+            'rel_x': 0.5, # 초기 상대 위치
+            'rel_y': 0.5, # 초기 상대 위치
+            'angle': layer.angle
+        }
+        # ShapeLayer인 경우 추가 정보 저장
+        if isinstance(layer, ShapeLayer):
+            self.canvas_objects[layer.path].update({
+                'shape_type': layer.shape_type,
+                'color': layer.color,
+                'pil_image': layer.pil_image # 자유곡선 원본 PIL (필요 시)
+            })
+
+        self.update_object_display(layer, self.controller.get_zoom())
+        self.reorder_canvas_layers()
+
+    def remove_layer_from_canvas(self, layer: Layer):
+        """레이어를 캔버스에서 제거"""
+        if layer.path in self.canvas_objects:
+            item_id = self.canvas_objects[layer.path]['id']
+            self.canvas.delete(item_id)
+            del self.canvas_objects[layer.path]
+            # 만약 제거된 레이어가 활성 선택이었다면 핸들도 제거
+            if self.active_selection_path == layer.path:
+                self.clear_resize_handles()
+
+
+    def update_object_display(self, layer_or_logo: Layer | dict, zoom: float):
+        """지정된 레이어 또는 로고 객체의 캔버스 표시 업데이트 (크기, 회전 등)"""
+        is_logo = isinstance(layer_or_logo, dict) and layer_or_logo.get('type') == 'logo'
+        path = layer_or_logo.get('path') if is_logo else layer_or_logo.path
+
+        if path not in self.canvas_objects and not is_logo: # 로고는 controller에 별도 저장
+             print(f"경고: update_object_display - path '{path}'가 canvas_objects에 없음")
+             return
+
+        obj_info = self.controller.logo_object if is_logo else self.canvas_objects[path]
+        item_id = obj_info['id']
+
+        canvas_w, canvas_h = self.get_canvas_size(zoom)
+        if canvas_w <= 1 : return # 캔버스 크기 유효하지 않으면 종료
+
+        # 실제 줌 레벨 (뷰포트 맞춤 + 사용자 줌)
+        actual_zoom = self.fit_scale * zoom
+
+        # 1. 표시용 PIL 이미지 생성/가져오기
+        pil_img = None
+        if is_logo:
+             pil_img = self.controller._get_display_pil_for_logo(actual_zoom)
+        else:
+             pil_img = self._get_display_pil_for_layer(layer_or_logo, actual_zoom)
+
+        if pil_img is None:
+             # 이미지 생성 실패 시 (예: 크기가 너무 작음) 캔버스에서 숨김
+             self.canvas.itemconfig(item_id, state='hidden')
+             return
+        else:
+             self.canvas.itemconfig(item_id, state='normal') # 다시 보이게 함
+
+
+        # 2. Tkinter 이미지 업데이트 및 객체 정보 저장
+        obj_info['tk_img'] = ImageTk.PhotoImage(pil_img)
+        obj_info['pil_for_display'] = pil_img # 투명도 체크용
+        self.canvas.itemconfig(item_id, image=obj_info['tk_img'])
+
+        # 3. 위치 업데이트 (상대 좌표 기준)
+        x = obj_info['rel_x'] * canvas_w
+        y = obj_info['rel_y'] * canvas_h
+        self.canvas.coords(item_id, x, y)
+
+        # 4. 활성 선택이면 핸들 업데이트
+        if self.active_selection_path == path:
+             self.activate_resize_handles(path) # 핸들 위치/크기 갱신
+
+
+    def _get_display_pil_for_layer(self, layer: Layer, actual_zoom: float) -> Image.Image | None:
+        """주어진 레이어와 줌 레벨에 맞는 표시용 PIL 이미지 생성"""
+        img = None
+        target_w, target_h = 0, 0
+        original_pil = None
+
+        if isinstance(layer, ImageLayer):
+            original_pil = layer.get_pil_image_to_process() # 크롭 적용된 표시용 이미지
+            canvas_h_logical = self.controller.settings['output_height'].get()
+            logo_zone_h_logical = canvas_h_logical * (self.controller.settings['logo_zone_height'].get() / 1500.0)
+            # 논리적 높이 기준으로 이미지 크기 계산
+            target_h_logical = (canvas_h_logical - logo_zone_h_logical) * (layer.scale_var.get() / 100.0)
+
+            if original_pil.height > 0:
+                ratio = target_h_logical / original_pil.height
+                target_w, target_h = int(original_pil.width * ratio * actual_zoom), int(target_h_logical * actual_zoom)
+            else:
+                 return None # 원본 높이가 0이면 표시 불가
+
+        elif isinstance(layer, TextLayer):
+            try:
+                # 폰트 크기에 줌 레벨 직접 반영
+                font_size = int(layer.scale_var.get() * actual_zoom)
+                if font_size < 1: return None # 너무 작으면 표시 불가
+                font = ImageFont.truetype(FontService.get_font_path(layer.font_family), font_size)
+                # Pillow 10.0.0 이후 getsize -> getbbox 권장
+                # bbox = font.getsize(layer.text) # (width, height) - Pillow < 10.0.0
+                bbox = font.getbbox(layer.text) # (left, top, right, bottom) - Pillow >= 10.0.0
+                text_w = bbox[2] - bbox[0]
+                text_h = bbox[3] - bbox[1]
+                if text_w <= 0 or text_h <= 0: return None
+
+                img = Image.new('RGBA', (text_w, text_h), (0, 0, 0, 0)) # 투명 배경
+                draw = ImageDraw.Draw(img) # ImageDraw import 필요
+                # bbox 기준으로 그리기 (텍스트 시작 위치 조정)
+                draw.text((-bbox[0], -bbox[1]), layer.text, font=font, fill=layer.color)
+                original_pil = img # 회전 적용 위해 설정
+
+            except Exception as e:
+                print(f"텍스트 이미지 생성 오류: {e}")
+                return None
+
+        elif isinstance(layer, ShapeLayer):
+            if layer.shape_type == '자유곡선':
+                original_pil = layer.pil_image # 저장된 PIL 이미지 사용
+                if original_pil:
+                     scale_factor = layer.scale_var.get() / 100.0
+                     target_w = int(original_pil.width * scale_factor * actual_zoom)
+                     target_h = int(original_pil.height * scale_factor * actual_zoom)
+                else: return None
+            else: # 일반 도형 (사각형, 삼각형 등)
+                 # 도형 크기에 줌 레벨 직접 반영
+                 size = layer.scale_var.get() * actual_zoom
+                 if size < 1: return None
+                 points = layer._get_shape_points((0, 0), size)
+                 if not points: return None
+
+                 # 회전을 여기서 먼저 적용 (리사이즈 전에)
+                 if layer.angle != 0:
+                      points = ImageService._rotate_points(points, (0, 0), -layer.angle)
+
+                 xs, ys = points[0::2], points[1::2]
+                 min_x, max_x = min(xs), max(xs)
+                 min_y, max_y = min(ys), max(ys)
+                 width, height = int(max_x - min_x) + 1, int(max_y - min_y) + 1
+                 if width <= 0 or height <= 0: return None
+
+                 img = Image.new('RGBA', (width, height), (0,0,0,0))
+                 shape_draw = ImageDraw.Draw(img)
+                 shifted_points = [(x - min_x, y - min_y) for x, y in zip(xs, ys)]
+                 shape_draw.polygon(shifted_points, fill=layer.color)
+                 # 도형은 여기서 최종 이미지 생성 완료 (회전 이미 적용됨)
+                 return img # 리사이즈/회전 로직 건너뛰기
+
+        # --- 이미지 리사이즈 및 회전 (텍스트, 이미지, 자유곡선 공통) ---
+        if original_pil is None: return None
+        if target_w < 1 or target_h < 1: return None
+
+        try:
+            # 리사이즈
+            resized_img = original_pil.resize((target_w, target_h), Image.Resampling.LANCZOS)
+            # 회전
+            if layer.angle != 0:
+                # 텍스트 레이어는 여기서 회전 적용
+                return resized_img.rotate(layer.angle, expand=True, resample=Image.Resampling.BICUBIC)
+            else:
+                return resized_img
+        except Exception as e:
+            print(f"이미지 처리 오류 ({layer.path}): {e}")
+            return None
+
+
+    def update_all_objects_display(self, zoom: float):
+        """캔버스의 모든 객체(레이어, 로고) 표시 업데이트"""
+        # 레이어 업데이트
+        for layer in self.controller.get_layers():
+            if layer.is_visible.get():
+                self.update_object_display(layer, zoom)
+        # 로고 업데이트
+        if self.controller.logo_object:
+            self.update_object_display(self.controller.logo_object, zoom)
+
+
+    def reorder_canvas_layers(self):
+        """레이어 리스트 순서에 맞게 캔버스 객체 쌓임 순서 변경"""
+        # 로고가 있으면 맨 위로
+        if self.controller.logo_object:
+             self.canvas.lift(self.controller.logo_object['id'])
+
+        # 레이어 리스트의 역순으로 lift (아래쪽 레이어부터 위로 올림)
+        for layer in reversed(self.controller.get_layers()):
+            if layer.path in self.canvas_objects:
+                self.canvas.lift(self.canvas_objects[layer.path]['id'])
+
+    def get_canvas_size(self, zoom: float = None) -> tuple[int, int]:
+        """현재 줌 레벨을 적용한 캔버스의 논리적 크기 반환"""
+        if zoom is None: zoom = self.controller.get_zoom()
+        w = int(self.controller.settings['output_width'].get() * self.fit_scale * zoom)
+        h = int(self.controller.settings['output_height'].get() * self.fit_scale * zoom)
+        return max(1, w), max(1, h) # 최소 1x1
+
+    def finalize_object_move(self, path: str):
+        """객체 이동 완료 후 상대 좌표 업데이트"""
+        obj_info = None
+        if path == 'logo':
+             obj_info = self.controller.logo_object
+        elif path in self.canvas_objects:
+             obj_info = self.canvas_objects[path]
+
+        if not obj_info: return
+
+        canvas_w, canvas_h = self.get_canvas_size() # 줌 100% 기준 크기
+        item_id = obj_info['id']
+        coords = self.canvas.coords(item_id)
+
+        # 캔버스 경계 및 로고 존 확인/보정
+        img_w, img_h = 0, 0
+        pil_img = obj_info.get('pil_for_display') # 현재 표시된 이미지
+        if pil_img:
+             img_w, img_h = pil_img.width, pil_img.height
+
+        logo_zone_h = canvas_h * (self.controller.settings['logo_zone_height'].get() / 1500.0)
+        min_x, max_x = img_w / 2, canvas_w - img_w / 2
+        min_y = logo_zone_h + img_h / 2 if path != 'logo' else img_h / 2 # 로고는 로고존 내부 허용
+        max_y = canvas_h - img_h / 2
+
+        # 새 좌표 계산 (경계 보정)
+        # coords는 현재 줌 레벨 기준이므로, 100% 줌 기준으로 변환 필요 없음
+        current_zoom = self.controller.get_zoom()
+        current_canvas_w, current_canvas_h = self.get_canvas_size(current_zoom)
+        current_logo_zone_h = current_canvas_h * (self.controller.settings['logo_zone_height'].get() / 1500.0)
+
+        current_min_y = current_logo_zone_h + img_h / 2 if path != 'logo' else img_h / 2
+        current_max_y = current_canvas_h - img_h / 2
+        current_min_x = img_w / 2
+        current_max_x = current_canvas_w - img_w / 2
+
+        final_x = max(current_min_x, min(coords[0], current_max_x))
+        final_y = max(current_min_y, min(coords[1], current_max_y))
+
+        # 캔버스 객체 위치 업데이트
+        if coords[0] != final_x or coords[1] != final_y:
+            self.canvas.coords(item_id, final_x, final_y)
+
+        # 상대 좌표 업데이트 (100% 줌 기준 캔버스 크기 사용)
+        obj_info['rel_x'] = final_x / current_canvas_w if current_canvas_w > 0 else 0.5
+        obj_info['rel_y'] = final_y / current_canvas_h if current_canvas_h > 0 else 0.5
+
+
+    # --- 리사이즈/회전 핸들 관련 ---
+    def activate_resize_handles(self, path: str):
+        """지정된 path의 객체 주위에 리사이즈/회전 핸들 표시"""
+        self.clear_resize_handles() # 기존 핸들 제거
+        self.active_selection_path = path
+
+        obj_info = None
+        if path == 'logo':
+             obj_info = self.controller.logo_object
+        elif path in self.canvas_objects:
+             obj_info = self.canvas_objects[path]
+
+        if not obj_info or 'id' not in obj_info:
+             self.active_selection_path = None
+             return
+
+        item_id = obj_info['id']
+        pil_img = obj_info.get('pil_for_display')
+        if not pil_img:
+             self.active_selection_path = None
+             return # 표시 이미지가 없으면 핸들 표시 불가
+
+        angle_degrees = obj_info.get('angle', 0.0) # 로고는 angle 0
+        angle_rad = math.radians(angle_degrees)
+        cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
+
+        cx, cy = self.canvas.coords(item_id) # 이미지 중심 좌표
+        w, h = pil_img.width, pil_img.height
+        hw, hh = w / 2, h / 2
+
+        # 8개 핸들 위치 계산 (회전 적용)
+        handle_positions = {
+            'nw': (-hw, -hh), 'n': (0, -hh), 'ne': (hw, -hh),
+            'w':  (-hw, 0),                 'e':  (hw, 0),
+            'sw': (-hw, hh), 's': (0, hh), 'se': (hw, hh)
+        }
+        handle_size = 6
+
+        # 테두리 그리기
+        corners = [
+            handle_positions['nw'], handle_positions['ne'],
+            handle_positions['se'], handle_positions['sw']
+        ]
+        rotated_corners = []
+        for rel_x, rel_y in corners:
+            rot_x = rel_x * cos_a - rel_y * sin_a
+            rot_y = rel_x * sin_a + rel_y * cos_a
+            rotated_corners.extend([cx + rot_x, cy + rot_y])
+
+        self.canvas.create_polygon(rotated_corners, fill='', outline='blue', width=1, tags=('border', path))
+
+        # 리사이즈 핸들 그리기 (로고 제외)
+        if path != 'logo':
+            for name, (rel_x, rel_y) in handle_positions.items():
+                rot_x = rel_x * cos_a - rel_y * sin_a
+                rot_y = rel_x * sin_a + rel_y * cos_a
+                abs_x, abs_y = cx + rot_x, cy + rot_y
+                self.canvas.create_rectangle(
+                    abs_x - handle_size/2, abs_y - handle_size/2,
+                    abs_x + handle_size/2, abs_y + handle_size/2,
+                    fill='white', outline='blue', width=1, tags=('handle', name, path)
+                )
+
+            # 회전 핸들 그리기 (로고 제외)
+            rotate_handle_y_offset = -hh - 20 # 위쪽 중앙 핸들보다 약간 위에
+            rot_x = 0 * cos_a - rotate_handle_y_offset * sin_a
+            rot_y = 0 * sin_a + rotate_handle_y_offset * cos_a
+            abs_x, abs_y = cx + rot_x, cy + rot_y
+            self.canvas.create_oval(
+                abs_x - handle_size/2, abs_y - handle_size/2,
+                abs_x + handle_size/2, abs_y + handle_size/2,
+                fill='lightblue', outline='blue', width=1, tags=('rotate_handle', path)
+            )
+
+        self.reorder_canvas_layers() # 핸들이 위로 오도록
+
+
+    def clear_resize_handles(self):
+        """모든 리사이즈/회전 핸들 및 테두리 제거"""
+        self.canvas.delete("handle")
+        self.canvas.delete("rotate_handle")
+        self.canvas.delete("border")
+        self.active_selection_path = None
+
+
+    def process_resizing(self, current_x, current_y, resize_data):
+        """리사이즈 중 마우스 움직임 처리"""
+        if not resize_data: return
+
+        item_id = resize_data['item_id']
+        handle_type = resize_data['handle_type']
+        start_x, start_y = resize_data['start_x'], resize_data['start_y']
+        start_bbox = resize_data['start_bbox'] # 회전 안된 상태의 bbox (고정점 계산용)
+        is_cropping = resize_data['is_cropping']
+
+        path = self.active_selection_path
+        if not path or path == 'logo': return # 로고는 리사이즈 안 함
+        layer = self.controller.get_layer_by_path(path)
+        if not layer: return
+
+        # 객체 정보 가져오기
+        obj_info = self.canvas_objects.get(path)
+        if not obj_info: return
+
+        # 현재 객체 중심 좌표
+        cx, cy = self.canvas.coords(item_id)
+
+        # 현재 객체 각도 (고정)
+        angle_degrees = obj_info.get('angle', 0.0)
+        angle_rad = math.radians(angle_degrees)
+        cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
+        cos_a_inv, sin_a_inv = math.cos(-angle_rad), math.sin(-angle_rad) # 역회전
+
+        # 마우스 이동량 (캔버스 좌표 기준)
+        dx = current_x - start_x
+        dy = current_y - start_y
+
+        # 시작 bbox 중심점 (회전 안된 상태 기준)
+        start_cx = (start_bbox[0] + start_bbox[2]) / 2
+        start_cy = (start_bbox[1] + start_bbox[3]) / 2
+
+        # 마우스 시작점과 현재점을 객체의 회전각만큼 역회전 시켜서,
+        # 회전 안된 좌표계에서의 마우스 이동량을 계산
+        start_x_rel, start_y_rel = start_x - cx, start_y - cy
+        current_x_rel, current_y_rel = current_x - cx, current_y - cy
+
+        unrot_start_x = start_x_rel * cos_a_inv - start_y_rel * sin_a_inv
+        unrot_start_y = start_x_rel * sin_a_inv + start_y_rel * cos_a_inv
+        unrot_current_x = current_x_rel * cos_a_inv - current_y_rel * sin_a_inv
+        unrot_current_y = current_x_rel * sin_a_inv + current_y_rel * cos_a_inv
+
+        unrot_dx = unrot_current_x - unrot_start_x
+        unrot_dy = unrot_current_y - unrot_start_y
+
+        # 회전 안된 좌표계 기준 시작 bbox 크기
+        start_w = start_bbox[2] - start_bbox[0]
+        start_h = start_bbox[3] - start_bbox[1]
+
+        # 핸들 타입에 따라 새 크기 계산 (회전 안된 좌표계 기준)
+        new_w, new_h = start_w, start_h
+        aspect_ratio = start_w / start_h if start_h != 0 else 1.0
+
+        if 'n' in handle_type:
+             new_h = start_h - unrot_dy
+             if 'w' not in handle_type and 'e' not in handle_type: new_w = new_h * aspect_ratio
+        if 's' in handle_type:
+             new_h = start_h + unrot_dy
+             if 'w' not in handle_type and 'e' not in handle_type: new_w = new_h * aspect_ratio
+        if 'w' in handle_type:
+             new_w = start_w - unrot_dx
+             if 'n' not in handle_type and 's' not in handle_type: new_h = new_w / aspect_ratio
+        if 'e' in handle_type:
+             new_w = start_w + unrot_dx
+             if 'n' not in handle_type and 's' not in handle_type: new_h = new_w / aspect_ratio
+
+        # 크기가 최소값 이하로 줄어드는 것 방지
+        min_size = 10
+        new_w = max(min_size, new_w)
+        new_h = max(min_size, new_h)
+
+        # 스케일 값 계산
+        if start_w > 0 and start_h > 0:
+            scale_change = max(new_w / start_w, new_h / start_h)
+            new_scale = layer.scale_var.get() * scale_change
+
+            # scale_var 업데이트 (Text, Shape 은 이게 크기)
+            layer.scale_var.set(max(1.0, new_scale)) # 최소값 1.0
+            # ImageLayer는 scale_var가 높이 비율이므로 별도 처리 필요
+            # TODO: ImageLayer 리사이즈 로직 정교화 (현재는 scale_var만 변경하여 update_object_display 호출 유도)
+
+        # 리사이즈 데이터 업데이트 (필요시)
+        resize_data.update(start_x=current_x, start_y=current_y) # 다음 motion 이벤트 위해 시작점 갱신
+
+
+    def process_rotation(self, current_x, current_y, rotation_data):
+        """회전 중 마우스 움직임 처리"""
+        if not rotation_data: return
+        item_id = rotation_data['item_id']
+        cx, cy = rotation_data['center_x'], rotation_data['center_y']
+        start_angle = rotation_data['start_angle']
+        initial_item_angle = rotation_data['initial_item_angle']
+
+        current_angle = math.degrees(math.atan2(current_y - cy, current_x - cx))
+        delta_angle = current_angle - start_angle
+        new_angle = (initial_item_angle + delta_angle) % 360
+
+        path = self.active_selection_path
+        if path and path != 'logo': # 로고는 회전 불가
+            layer = self.controller.get_layer_by_path(path)
+            if layer:
+                layer.angle = new_angle
+                # 캔버스 객체 정보에도 각도 업데이트
+                if path in self.canvas_objects:
+                     self.canvas_objects[path]['angle'] = new_angle
+                # 표시 업데이트 (회전된 이미지 재생성)
+                self.update_object_display(layer, self.controller.get_zoom())
+
+
+    def finalize_resize_or_rotate(self, path: str):
+        """리사이즈 또는 회전 완료 후 처리"""
+        if not path or path == 'logo': return # 로고는 처리 안 함
+        layer = self.controller.get_layer_by_path(path)
+        if layer:
+            # 최종 상태로 캔버스 업데이트 (필요 시 정교한 계산 추가)
+            self.update_object_display(layer, self.controller.get_zoom())
+            self.controller.update_status(f"'{layer.get_display_name()}' 변형 완료.")
+        # 핸들 재표시 (위치/크기 업데이트 위해)
+        self.activate_resize_handles(path)
+
+
+    def get_object_info_by_id(self, item_id: int) -> dict | None:
+        """캔버스 item ID로 객체 정보 딕셔너리 찾기"""
+        if self.controller.logo_object and self.controller.logo_object.get('id') == item_id:
+            return self.controller.logo_object
+        for info in self.canvas_objects.values():
+            if info.get('id') == item_id:
+                return info
+        return None
+
+================================================================================
+
+(10) tabs\easel\components\__init__.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(11) tabs\easel\components\layer_list.py
+--------------------------------------------------------------------------------
+# 파일 경로: tabs/easel/components/layer_list.py (Double Click & Checkbutton Fix 2 with Debug)
+
+import tkinter as tk
+import tkinter.ttk as ttk # 표준 ttk 사용 (Scrollbar)
+# ttkbootstrap import 제거
+from ..models.layer import Layer, ImageLayer, TextLayer, ShapeLayer
+
+# [ ★★★★★ NEW: 테마 임포트 ★★★★★ ]
+from ui.theme import Colors
+
+# --- 라이브러리 가용성 확인 ---
+try: from tkinterdnd2 import DND_FILES; DND_AVAILABLE = True
+except ImportError: DND_AVAILABLE = False
+
+class LayerList(tk.Frame): # tk.Frame 상속
+    """레이어 목록 UI를 관리하는 클래스"""
+    FILENAME_TRUNCATE_LIMIT = 25
+    FILENAME_DISPLAY_LIMIT = 22
+
+    def __init__(self, parent, controller, **kwargs):
+        super().__init__(parent, bg=Colors.WHITE, **kwargs) # Use Colors.WHITE
+        self.controller = controller # EaselController 참조
+        self._list_drag_data = {}
+        self._build_widgets()
+
+    def _build_widgets(self):
+        container = tk.Frame(self, bg=Colors.WHITE); container.pack(fill='both', expand=True, padx=3, pady=(0,3)); container.rowconfigure(0, weight=1); container.columnconfigure(0, weight=1) # Use Colors.WHITE
+        self.canvas = tk.Canvas(container, bd=0, highlightthickness=0, bg=Colors.WHITE) # Use Colors.WHITE
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=self.canvas.yview)
+        self.canvas.configure(yscrollcommand=scrollbar.set); self.canvas.grid(row=0, column=0, sticky="nsew"); scrollbar.grid(row=0, column=1, sticky="ns")
+        self.list_frame = tk.Frame(self.canvas, bg=Colors.WHITE) # Use Colors.WHITE
+        self.list_canvas_window = self.canvas.create_window((0, 0), window=self.list_frame, anchor="nw")
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
+        if DND_AVAILABLE:
+            self.canvas.drop_target_register(DND_FILES); self.canvas.dnd_bind("<<Drop>>", self._on_drop)
+            self.list_frame.drop_target_register(DND_FILES); self.list_frame.dnd_bind("<<Drop>>", self._on_drop)
+
+    def _on_canvas_configure(self, event): self.canvas.itemconfig(self.list_canvas_window, width=event.width); self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+    def _on_drop(self, event): files = self.winfo_toplevel().tk.splitlist(event.data); self.controller.add_new_image_layers(files)
+
+    def populate_list(self, layers: list[Layer]):
+        for child in self.list_frame.winfo_children(): # 이전 위젯 제거
+            widget_layer_path = getattr(child, '_layer_path', None)
+            if widget_layer_path:
+                layer = self.controller.get_layer_by_path(widget_layer_path)
+                if layer and hasattr(layer, 'scale_var_trace_id'):
+                    try: layer.scale_var.trace_remove('write', layer.scale_var_trace_id)
+                    except (AttributeError, tk.TclError): pass
+            child.destroy()
+        print(f"DEBUG: Populating list with {len(layers)} layers.") # Debug print
+        for i, layer in enumerate(layers): self._create_list_item(i, layer) # 새 위젯 생성
+        self.list_frame.update_idletasks(); self.canvas.config(scrollregion=self.canvas.bbox("all")); self.update_selection_visuals(layers)
+
+    def _create_list_item(self, index: int, layer: Layer):
+        row_index = index * 2
+        widget = tk.Frame(self.list_frame, bg=Colors.WHITE, padx=5, pady=5); widget.is_draggable_item = True; widget._layer_path = layer.path # Use Colors.WHITE
+        widget.grid(row=row_index, column=0, sticky="ew", padx=2); widget.columnconfigure(1, weight=1); layer.widget_ref = widget
+        if index < len(self.controller.get_layers()) - 1:
+            separator = tk.Frame(self.list_frame, height=1, bg=Colors.GREY); separator.grid(row=row_index + 1, column=0, sticky='ew', padx=10, pady=2) # Use Colors.GREY
+
+        print(f"DEBUG: Creating Checkbutton for layer {index}: {layer.path}") # Debug print
+        checkbutton = tk.Checkbutton(widget, variable=layer.is_visible,
+                                      command=lambda l=layer: (print(f"DEBUG: Checkbutton command triggered for layer: {l.path}"), self.controller.toggle_layer_visibility(l)),
+                                      bg=Colors.WHITE, activebackground=Colors.WHITE, selectcolor=Colors.WHITE, relief=tk.FLAT, bd=0) # Use Colors
+        checkbutton.grid(row=0, column=0, rowspan=2, sticky='ns', padx=(0, 5))
+
+        display_name = layer.get_display_name(); display_name = display_name[:self.FILENAME_DISPLAY_LIMIT] + "..." if len(display_name) > self.FILENAME_TRUNCATE_LIMIT else display_name
+        if not hasattr(layer, '_thumbnail_ref'):
+             try: layer.thumbnail = layer.create_thumbnail(); layer._thumbnail_ref = layer.thumbnail
+             except Exception as e: print(f"썸네일 생성 실패 ({layer.path}): {e}")
+        name_label = tk.Label(widget, image=getattr(layer, '_thumbnail_ref', None), text=display_name, compound="left", bg=Colors.WHITE, fg=Colors.DARK_TEAL, anchor=tk.W) # Use Colors
+        name_label.grid(row=0, column=1, rowspan=2, sticky='w')
+        ctrl_frame = tk.Frame(widget, bg=Colors.WHITE); ctrl_frame.grid(row=0, column=2, rowspan=2, sticky='e', padx=5) # Use Colors.WHITE
+        s_from = 8 if isinstance(layer, (TextLayer, ShapeLayer)) else 10; s_inc = 1.0 if isinstance(layer, (TextLayer, ShapeLayer)) else 5.0
+        if hasattr(layer, 'scale_var'):
+            scale_spinbox = tk.Spinbox(ctrl_frame, from_=s_from, to=500, textvariable=layer.scale_var, width=5, increment=s_inc); scale_spinbox.pack(pady=2)
+            layer.scale_var_trace_id = layer.scale_var.trace_add("write", lambda n, i, m, l=layer: self.controller.update_layer_properties(l))
+        btn_frame = tk.Frame(ctrl_frame, bg=Colors.WHITE); btn_frame.pack() # Use Colors.WHITE
+        bg_state = tk.NORMAL if isinstance(layer, ImageLayer) else tk.DISABLED
+        tk.Button(btn_frame, text="배경", width=5, command=lambda l=layer: self.controller.remove_layer_background(l), state=bg_state, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(side='left', padx=(0, 2)) # Use Colors
+        tk.Button(btn_frame, text="삭제", width=5, command=lambda l=layer: self.controller.delete_layers([l]), bg=Colors.MAIN_RED, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARKER_RED).pack(side='left') # Use Colors
+
+        # --- Event Binding Debug ---
+        # [ ★★★★★ MODIFIED: Bind specific widgets directly, use _bind_recursive carefully ★★★★★ ]
+        # Widgets that should trigger list selection and drag start on ButtonPress-1
+        press_drag_widgets = [widget, name_label, ctrl_frame, btn_frame]
+        for w in press_drag_widgets:
+            if 'scale_spinbox' in locals() and w == scale_spinbox: continue # Skip Spinbox for press/drag/release
+            # Bind ButtonPress-1 only to widgets that are NOT the checkbutton
+            w.bind("<ButtonPress-1>", lambda e, idx=index: self._on_list_item_press(e, idx))
+            # Bind Motion and Release to allow dragging from these widgets
+            w.bind("<B1-Motion>", lambda e: self._on_list_item_drag(e))
+            w.bind("<ButtonRelease-1>", lambda e: self._on_list_item_release(e))
+            # Bind Double-Click
+            w.bind("<Double-Button-1>", lambda e, l=layer: self._on_list_item_double_click(e, l))
+
+        # Bind events to the checkbutton itself, but NOT ButtonPress-1 or ButtonRelease-1
+        # This allows the checkbutton's default command to work, but still allows dragging *from* it.
+        checkbutton.bind("<B1-Motion>", lambda e: self._on_list_item_drag(e))
+        # We might need ButtonRelease on checkbutton if drag STARTS on it? Test this.
+        # checkbutton.bind("<ButtonRelease-1>", lambda e: self._on_list_item_release(e)) # Potentially add back if needed
+        checkbutton.bind("<Double-Button-1>", lambda e, l=layer: self._on_list_item_double_click(e, l))
+
+        # Use _bind_recursive only for events that should apply universally AND don't conflict,
+        # or modify _bind_recursive to skip certain widgets/events.
+        # For now, binding directly is safer.
+        # --- End Event Binding Debug ---
+
+    # [ ★★★★★ REMOVED: _handle_press function is no longer needed ★★★★★ ]
+    # def _handle_press(self, event, clicked_index): ...
+
+    def _find_item_widget(self, widget: tk.Widget) -> tk.Frame | None:
+        current = widget
+        while current and not (isinstance(current, tk.Frame) and hasattr(current, "is_draggable_item")): parent = getattr(current, 'master', None); current = parent if parent else None
+        return current if hasattr(current, "is_draggable_item") else None
+
+    def _on_list_item_press(self, event, clicked_index):
+        # This function is now only called when ButtonPress-1 happens on widgets OTHER than the checkbutton.
+        print(f"DEBUG: _on_list_item_press called for index {clicked_index}, state: {event.state}, widget: {event.widget}") # Debug print
+        self.controller.select_layer_from_list(clicked_index, event.state)
+        widget = self._find_item_widget(event.widget)
+        if widget:
+            print(f"DEBUG: Starting potential drag for item at index {clicked_index}") # Debug print
+            self._list_drag_data = {"widget": widget, "source_index": clicked_index}
+        else:
+             print(f"DEBUG: Could not find draggable item widget for press at index {clicked_index}") # Debug print
+             self._list_drag_data = {}
+
+
+    def _on_list_item_drag(self, event):
+        if not self._list_drag_data: return
+        source_index = self._list_drag_data.get("source_index", -1)
+        if source_index == -1: return
+
+        dest_widget_under_mouse = event.widget.winfo_containing(event.x_root, event.y_root)
+        if not dest_widget_under_mouse: return
+
+        dest_widget = self._find_item_widget(dest_widget_under_mouse)
+        if not dest_widget: return
+
+        dest_index = -1; layers = self.controller.get_layers()
+        for i, layer in enumerate(layers):
+            if layer.widget_ref == dest_widget: dest_index = i; break
+
+        if dest_index != -1 and dest_index != source_index:
+            print(f"DEBUG: Drag moved item from {source_index} to {dest_index}") # Debug print
+            self.controller.move_layer_in_list(source_index, dest_index)
+            self.populate_list(layers) # Repopulate updates visuals and widget references
+            self._list_drag_data["source_index"] = dest_index # Update source index after move
+            print(f"DEBUG: Drag source index updated to {dest_index} after repopulate") # Debug print
+
+    def _on_list_item_release(self, event):
+        if self._list_drag_data:
+            print(f"DEBUG: Releasing drag, finalizing order.") # Debug print
+            self.controller.finalize_layer_reorder()
+            self._list_drag_data = {}
+        # else:
+            # print("DEBUG: _on_list_item_release called without active drag data.") # Debug print needed?
+
+
+    def _on_list_item_double_click(self, event, layer: Layer):
+        print(f"DEBUG: Double click detected for layer: {layer.path}") # Debug print
+        if layer:
+            if layer.is_visible.get():
+                try:
+                    print(f"DEBUG: Activating handles for {layer.path}") # Debug print
+                    self.controller.view.canvas_controller.activate_resize_handles(layer.path)
+                except Exception as e: print(f"Error activating handles on double click: {e}")
+            print(f"DEBUG: Editing properties for {layer.path}") # Debug print
+            self.controller.edit_layer_properties(layer)
+
+    def update_selection_visuals(self, layers):
+        for layer in layers:
+            widget = layer.widget_ref
+            if not (widget and widget.winfo_exists()): continue
+            is_selected = layer.selected
+            target_bg = Colors.SELECTED_BG if is_selected else Colors.WHITE # Use Colors
+            try:
+                widget.configure(bg=target_bg)
+                for child in widget.winfo_children():
+                    if isinstance(child, (tk.Checkbutton, tk.Label, tk.Frame)):
+                        is_button_frame = isinstance(child, tk.Frame) and any(isinstance(gc, tk.Button) for gc in child.winfo_children())
+                        is_spinbox_frame = isinstance(child, tk.Frame) and any(isinstance(gc, tk.Spinbox) for gc in child.winfo_children())
+                        if not is_button_frame and not is_spinbox_frame :
+                             try:
+                                child.configure(bg=target_bg)
+                                if isinstance(child, tk.Frame):
+                                    for grandchild in child.winfo_children():
+                                        if isinstance(grandchild, tk.Label):
+                                            try: grandchild.configure(bg=target_bg)
+                                            except tk.TclError: pass
+                             except tk.TclError: pass
+            except tk.TclError: pass
+
+    # [ ★★★★★ MODIFIED: _bind_recursive to skip certain events/widgets ★★★★★ ]
+    def _bind_recursive(self, widget, event_type, command):
+        # Binds event ONLY if it doesn't conflict with widget's primary action
+        if widget:
+            # Skip ButtonPress/Release for Checkbutton to allow its command to work
+            if isinstance(widget, tk.Checkbutton) and event_type in ["<ButtonPress-1>", "<ButtonRelease-1>"]:
+                print(f"DEBUG: Skipping binding '{event_type}' for Checkbutton {widget}") # Debug print
+                pass # Skip binding
+            # Skip ButtonPress/Release for Button? (Generally OK, but consider if needed)
+            # Skip for Spinbox/Entry/Combobox to allow text selection/editing
+            elif isinstance(widget, (tk.Spinbox, tk.Entry, ttk.Combobox, tk.Button)) and event_type in ["<ButtonPress-1>", "<B1-Motion>", "<ButtonRelease-1>"]:
+                 print(f"DEBUG: Skipping binding '{event_type}' for Input/Button widget {widget}") # Debug print
+                 pass # Skip binding these potentially conflicting events
+            else:
+                # print(f"DEBUG: Binding '{event_type}' to {widget} ({type(widget)})") # Frequent print
+                widget.bind(event_type, command)
+
+            # Recurse for children, applying the same logic
+            for child in widget.winfo_children():
+                 # Don't recurse into input widgets' internal parts
+                 if not isinstance(child, (tk.Spinbox, tk.Entry, ttk.Combobox)):
+                    self._bind_recursive(child, event_type, command)
+
+================================================================================
+
+(12) tabs\easel\easel_controller.py
+--------------------------------------------------------------------------------
+# 파일 경로: tabs/easel/easel_controller.py (Auto Layout Target Fix 2)
+
+import tkinter as tk
+from tkinter import filedialog, messagebox
+import os
+import re
+import math
+from PIL import Image, ImageTk, ImageDraw # ImageDraw 추가
+import traceback # Added for detailed error reporting
+
+from .models.layer import Layer, ImageLayer, TextLayer, ShapeLayer, DISPLAY_IMG_MAX_SIZE # Import constant
+# Dialogs import
+from ui.dialogs import TextPropertiesDialog, ShapePropertiesDialog
+from .services.project_service import ProjectService
+from .services.image_service import ImageService
+from .services.font_service import FontService # FontService import for layout calculation
+
+
+class EaselController:
+    """
+    EaselTab의 모든 로직을 관장하는 메인 컨트롤러.
+    """
+    def __init__(self, view):
+        self.view = view # EaselTabView 참조
+        self.layers: list[Layer] = []
+        self.logo_object = None
+        self.last_selected_anchor_index = None
+        self.is_color_picking_mode = False
+        self.logo_preview_label = None
+        self.status_label = None
+        self._logo_preview_tkimg = None # Reference for logo preview
+        self.settings = {
+            'logo_path': tk.StringVar(), 'logo_zone_height': tk.IntVar(value=90),
+            'logo_size': tk.IntVar(value=70), 'style_code': tk.StringVar(),
+            'global_scale': tk.DoubleVar(value=30.0), 'grid_overlap': tk.IntVar(value=70),
+            'output_width': tk.IntVar(value=1500), 'output_height': tk.IntVar(value=1500),
+            'output_format': tk.StringVar(value="PNG"), 'background_color': tk.StringVar(value="#FFFFFF"),
+            'save_directory': tk.StringVar(value=os.path.expanduser("~")),
+            'zoom': tk.DoubleVar(value=100.0), 'palette_color': tk.StringVar(value="#FFFFFF")
+        }
+
+    def set_ui_references(self, logo_preview_label, status_label): self.logo_preview_label, self.status_label = logo_preview_label, status_label
+    def get_layers(self) -> list[Layer]: return self.layers
+    def get_layer_by_path(self, path: str) -> Layer | None: return next((l for l in self.layers if l.path == path), None)
+    def get_zoom(self) -> float: return self.settings['zoom'].get() / 100.0
+    def get_settings_values(self) -> dict: return {key: var.get() for key, var in self.settings.items()}
+    def update_status(self, text: str): self.status_label.config(text=text) if self.status_label else None
+
+    # --- Layer 데이터 관리 ---
+    def add_new_image_layers(self, files: list[str]):
+        new_files_added = False
+        for f in [f.strip('{}') for f in files]:
+            normalized_path = os.path.normpath(f)
+            if os.path.isfile(normalized_path) and normalized_path not in [l.path for l in self.layers if isinstance(l, ImageLayer)]:
+                try: self.layers.append(ImageLayer(file_path=normalized_path)); new_files_added = True
+                except Exception as e: print(f"Error creating ImageLayer for {normalized_path}: {e}"); messagebox.showerror("Image Load Error", f"Failed to load image:\n{normalized_path}\n\nError: {e}")
+        if new_files_added: self.view.layer_list.populate_list(self.layers); self._set_default_style_code() if not self.settings['style_code'].get() else None
+
+    def add_new_text_layer(self): dialog = TextPropertiesDialog(self.view.winfo_toplevel()); self.layers.append(TextLayer(**dialog.result)); self.view.layer_list.populate_list(self.layers) if dialog.result else None
+    def add_new_shape_layer(self): dialog = ShapePropertiesDialog(self.view.winfo_toplevel()); self.layers.append(ShapeLayer(**dialog.result)); self.view.layer_list.populate_list(self.layers) if dialog.result else None
+
+    def edit_layer_properties(self, layer: Layer):
+        if isinstance(layer, TextLayer):
+            init_vals = {'text': layer.text, 'font_family': layer.font_family, 'font_size': int(layer.scale_var.get()), 'color': layer.color}
+            dialog = TextPropertiesDialog(self.view.winfo_toplevel(), initial_values=init_vals)
+            if dialog.result: layer.text, layer.font_family, layer.color = dialog.result['text'], dialog.result['font_family'], dialog.result['color']; layer.scale_var.set(dialog.result['font_size']); self.view.canvas_controller.update_object_display(layer, self.get_zoom()); self.view.layer_list.populate_list(self.layers)
+
+    def delete_layers(self, layers_to_delete: list[Layer]):
+        if not layers_to_delete: messagebox.showinfo("알림", "삭제할 항목을 선택해주세요."); return
+        layer_names = ", ".join([l.get_display_name()[:20] for l in layers_to_delete])
+        if messagebox.askyesno("삭제 확인", f"{len(layers_to_delete)}개 항목 삭제?\n({layer_names})"):
+            for layer in layers_to_delete:
+                if layer in self.layers: layer.is_visible.set(False); self.toggle_layer_visibility(layer); self.layers.remove(layer)
+            self.view.layer_list.populate_list(self.layers); self.update_status(f"{len(layers_to_delete)}개 삭제 완료.")
+
+    def delete_selected_layers(self): self.delete_layers([l for l in self.layers if l.selected])
+
+    def toggle_layer_visibility(self, layer: Layer):
+        if layer.is_visible.get(): self.view.canvas_controller.add_layer_to_canvas(layer)
+        else: self.view.canvas_controller.remove_layer_from_canvas(layer); self.view.canvas_controller.clear_resize_handles() if self.view.canvas_controller.active_selection_path == layer.path else None
+
+    def update_layer_properties(self, layer: Layer): self.view.canvas_controller.update_object_display(layer, self.get_zoom()) if layer.is_visible.get() else None
+
+    def clear_all(self):
+        if not messagebox.askyesno("확인", "모든 작업 내용을 초기화하시겠습니까?"): return
+        for layer in self.layers: layer.is_visible.set(False); self.toggle_layer_visibility(layer) # Ensure canvas removal
+        self.layers.clear(); self.view.canvas_controller.canvas_objects.clear(); self.view.canvas_controller.clear_resize_handles()
+        self.delete_logo(confirm=False); self.settings['style_code'].set(""); self.reset_grid()
+        self.view.layer_list.populate_list(self.layers); self.update_status("모든 항목 초기화.")
+
+    # --- 레이어 목록(List) 관련 로직 ---
+    def select_layer_from_list(self, clicked_index, event_state):
+        is_shift, is_ctrl = (event_state & 0x0001), (event_state & 0x0004)
+        if not (0 <= clicked_index < len(self.layers)): # Click outside valid index
+            if not is_ctrl and not is_shift: # Clear selection if not modifying
+                for l in self.layers: l.selected = False; self.view.canvas_controller.clear_resize_handles()
+            self.view.layer_list.update_selection_visuals(self.layers); self.view.update_select_all_button_state(); return
+        layer_clicked = self.layers[clicked_index]
+        if is_shift and self.last_selected_anchor_index is not None:
+            start, end = min(self.last_selected_anchor_index, clicked_index), max(self.last_selected_anchor_index, clicked_index)
+            for i, layer in enumerate(self.layers): layer.selected = (start <= i <= end)
+            self.view.canvas_controller.clear_resize_handles()
+        elif is_ctrl:
+            layer_clicked.selected = not layer_clicked.selected; self.last_selected_anchor_index = clicked_index
+            self.view.canvas_controller.clear_resize_handles()
+        else: # Normal click
+            is_already_solely_selected = sum(1 for l in self.layers if l.selected) == 1 and layer_clicked.selected
+            for l in self.layers: l.selected = False # Deselect all first
+            if not is_already_solely_selected: layer_clicked.selected = True; self.last_selected_anchor_index = clicked_index
+            else: self.last_selected_anchor_index = None # Deselected the only one
+            self.view.canvas_controller.clear_resize_handles() # Clear handles on single click
+        self.view.layer_list.update_selection_visuals(self.layers); self.view.update_select_all_button_state()
+
+    def select_layer_from_canvas(self, path, event_state):
+        is_ctrl = (event_state & 0x0004); target_layer = self.get_layer_by_path(path) if path and path != 'logo' else None; is_logo = (path == 'logo')
+        if not is_ctrl: # Normal click
+            is_already_solely_selected = (is_logo and self.logo_object_is_selected() and sum(1 for l in self.layers if l.selected)==0) or \
+                                         (target_layer and target_layer.selected and sum(1 for l in self.layers if l.selected)==1 and not self.logo_object_is_selected())
+            for l in self.layers: l.selected = False # Deselect layers
+            if not is_already_solely_selected:
+                if is_logo: self.view.canvas_controller.activate_resize_handles('logo') # Select logo
+                elif target_layer: target_layer.selected = True; self.view.canvas_controller.clear_resize_handles() # Select layer (no handles on single)
+                else: self.view.canvas_controller.clear_resize_handles() # Clicked empty space
+            else: self.view.canvas_controller.clear_resize_handles() # Deselected the only one
+        else: # Ctrl click
+            if is_logo: pass # No ctrl+click action for logo for now
+            elif target_layer: target_layer.selected = not target_layer.selected; self.view.canvas_controller.clear_resize_handles() # Toggle, clear handles
+            # Ctrl+click empty space does nothing
+        self.view.layer_list.update_selection_visuals(self.layers); self.view.update_select_all_button_state()
+
+    def logo_object_is_selected(self): return self.view.canvas_controller.active_selection_path == 'logo'
+
+    def toggle_all_layer_selection(self):
+        if not self.layers: return; are_all_selected = all(l.selected for l in self.layers); new_state = not are_all_selected
+        for l in self.layers: l.selected = new_state
+        self.view.layer_list.update_selection_visuals(self.layers); self.view.update_select_all_button_state(); self.view.canvas_controller.clear_resize_handles()
+
+    def move_layer_in_list(self, source_index, dest_index):
+        if 0 <= source_index < len(self.layers) and 0 <= dest_index < len(self.layers): layer = self.layers.pop(source_index); self.layers.insert(dest_index, layer)
+        else: print(f"Index out of range: src={source_index}, dest={dest_index}, len={len(self.layers)}")
+
+    def finalize_layer_reorder(self): self.view.canvas_controller.reorder_canvas_layers(); self.view.layer_list.populate_list(self.layers)
+
+    # --- 서비스 연동 ---
+    def save_project(self):
+        canvas_objects_data = {}
+        for path, obj_info in self.view.canvas_controller.canvas_objects.items():
+            if 'rel_x' in obj_info and 'rel_y' in obj_info: canvas_objects_data[path] = {'rel_x': obj_info['rel_x'], 'rel_y': obj_info['rel_y']}
+        if self.logo_object: canvas_objects_data['logo'] = {'rel_x': self.logo_object['rel_x'], 'rel_y': self.logo_object['rel_y']}
+        status = ProjectService.save_project(self.get_settings_values(), self.layers, canvas_objects_data); self.update_status(status) if status else None
+
+    def load_project(self):
+        if not messagebox.askyesno("불러오기 확인", "현재 작업 내용 사라짐. 계속?"): return
+        project_data = ProjectService.load_project();
+        if not project_data: return
+        self.clear_all()
+        settings_data = project_data.get('settings', {})
+        for key, var in self.settings.items():
+            if key in settings_data:
+                try: var.set(settings_data[key])
+                except Exception as e: print(f"Warning: Set setting '{key}': {e}")
+        self.layers = project_data.get('layers', []); self.view.layer_list.populate_list(self.layers)
+        canvas_positions = project_data.get('canvas_positions', {}); initial_positions = {}
+        for layer in self.layers:
+            if layer.path in canvas_positions: initial_positions[layer.path] = canvas_positions[layer.path]
+        initial_logo_pos = canvas_positions.get('logo') if self.settings['logo_path'].get() else None
+        self.view.update_idletasks(); self.view._update_canvas_view() # Calc fit_scale
+        if initial_logo_pos: self._add_logo_to_canvas(); self.logo_object.update(initial_logo_pos) if self.logo_object else None
+        for layer in self.layers:
+            if layer.is_visible.get():
+                self.view.canvas_controller.add_layer_to_canvas(layer)
+                if layer.path in initial_positions and layer.path in self.view.canvas_controller.canvas_objects:
+                    self.view.canvas_controller.canvas_objects[layer.path].update(initial_positions[layer.path])
+        self.view.canvas_controller.update_all_objects_display(self.get_zoom()); self.view.canvas_controller.reorder_canvas_layers()
+        self.update_status(f"프로젝트 로드: {os.path.basename(project_data.get('path', ''))}")
+
+    def save_image(self): settings = self.get_settings_values(); settings['logo_info'] = self.logo_object if self.logo_object else None; status = ImageService.save_canvas_as_image(settings, self.layers, self.view.canvas_controller.canvas_objects); self.update_status(status) if status else None
+
+    def remove_layer_background(self, layer: Layer):
+        if not isinstance(layer, ImageLayer): return
+        self.update_status(f"'{layer.get_display_name()}' 배경 제거 중..."); self.view.update_idletasks()
+        print(f"DEBUG: Controller calling ImageService.remove_background for {layer.path}")
+        success = ImageService.remove_background(layer)
+        print(f"DEBUG: ImageService.remove_background returned: {success}")
+        if success:
+            print(f"DEBUG: BG remove success. Repopulating list & updating canvas for {layer.path}")
+            self.view.layer_list.populate_list(self.layers) # Update thumbnail
+            if layer.is_visible.get():
+                print(f"DEBUG: Layer {layer.path} visible, calling update_object_display.")
+                self.view.canvas_controller.update_object_display(layer, self.get_zoom()) # Force canvas update
+            else: print(f"DEBUG: Layer {layer.path} not visible, skipping canvas update.")
+            self.update_status("배경 제거 완료!")
+        else: print(f"DEBUG: BG remove failed for {layer.path}"); self.update_status("배경 제거 실패.")
+
+    # --- 유틸리티 ---
+    def _set_default_style_code(self): image_layers = [l for l in self.layers if isinstance(l, ImageLayer)]; self.settings['style_code'].set(os.path.commonprefix([os.path.basename(l.path) for l in image_layers])[:8]) if image_layers else None
+
+    def apply_global_scale(self):
+        selected = [l for l in self.layers if l.selected];
+        if not selected: messagebox.showwarning("알림", "크기 변경 레이어 선택."); return
+        scale_val = self.settings['global_scale'].get(); [l.scale_var.set(scale_val) for l in selected if hasattr(l, 'scale_var')]
+        self.update_status(f"{len(selected)}개 크기 변경 완료.")
+
+    # --- 로고 관련 로직 ---
+    def select_logo(self): path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png")]); self.settings['logo_path'].set(os.path.normpath(path)); self._add_logo_to_canvas() if path else None
+    def delete_logo(self, confirm=True):
+        if confirm and not self.logo_object: return
+        if confirm and not messagebox.askyesno("확인", "로고 삭제?"): return
+        if self.logo_object: self.view.canvas.delete(self.logo_object['id']); self.logo_object = None; self.view.canvas_controller.clear_resize_handles() if self.view.canvas_controller.active_selection_path == 'logo' else None
+        self.settings['logo_path'].set(""); self.update_logo_preview(); self.update_status("로고 삭제.") if confirm else None
+
+    def on_logo_panel_drop(self, event):
+        files = [f.strip('{}') for f in self.view.winfo_toplevel().tk.splitlist(event.data)]; first = next((f for f in files if os.path.isfile(f) and f.lower().endswith('.png')), None)
+        self.settings['logo_path'].set(os.path.normpath(first)); self._add_logo_to_canvas() if first else messagebox.showwarning("오류", ".png 파일 없음.")
+
+    def _add_logo_to_canvas(self):
+        path = self.settings['logo_path'].get();
+        if not path or not os.path.exists(path): self.delete_logo(confirm=False); return
+        if self.logo_object: self.view.canvas.delete(self.logo_object['id']); self.logo_object = None
+        try: pil_img_original = Image.open(path).convert("RGBA")
+        except Exception as e: messagebox.showerror("오류", f"로고 로드 실패: {e}"); self.settings['logo_path'].set(""); self.update_logo_preview(); return
+        lw, lh = self.settings['output_width'].get(), self.settings['output_height'].get();
+        if lw <= 1 or lh <= 1: self.view.after(50, self._add_logo_to_canvas); return
+        margin = 15; zone_h_log = lh * (self.settings['logo_zone_height'].get() / 1500.0)
+        temp_logo_disp = self._get_display_pil_for_logo(self.view.canvas_controller.fit_scale, pil_img_to_process=pil_img_original)
+        logo_w_at_100 = temp_logo_disp.width if temp_logo_disp else 20
+        rel_x = (margin + logo_w_at_100 / 2) / lw if lw > 0 else 0.1; rel_y = (zone_h_log / 2) / lh if lh > 0 else 0.1
+        item_id = self.view.canvas.create_image(0, 0, tags=("item", "logo"))
+        self.logo_object = {'id': item_id, 'type': 'logo', 'pil_img_original': pil_img_original, 'tk_img': None, 'pil_for_display': None, 'rel_x': rel_x, 'rel_y': rel_y, 'path': 'logo', 'original_path': path, 'angle': 0.0}
+        self.update_logo_object_display(); self.view.canvas_controller.reorder_canvas_layers()
+
+    def update_logo_object_display(self):
+        if not self.logo_object: return; obj_info = self.logo_object; zoom = self.get_zoom(); cw, ch = self.view.canvas_controller.get_canvas_size(zoom)
+        if cw <= 1: return; actual_zoom = self.view.canvas_controller.fit_scale * zoom
+        pil_img = self._get_display_pil_for_logo(actual_zoom)
+        if pil_img:
+            x, y = obj_info['rel_x'] * cw, obj_info['rel_y'] * ch
+            obj_info['tk_img'] = ImageTk.PhotoImage(pil_img); obj_info['pil_for_display'] = pil_img
+            self.view.canvas.itemconfig(obj_info['id'], image=obj_info['tk_img'], state='normal'); self.view.canvas.coords(obj_info['id'], x, y)
+            self.view.canvas_controller.activate_resize_handles('logo') if self.view.canvas_controller.active_selection_path == 'logo' else None
+        else: self.view.canvas.itemconfig(obj_info['id'], state='hidden')
+
+    def _get_display_pil_for_logo(self, actual_zoom: float, pil_img_to_process=None) -> Image.Image | None:
+        if pil_img_to_process is None: pil_img_to_process = self.logo_object.get('pil_img_original') if self.logo_object else None
+        if not pil_img_to_process: return None
+        scale = self.settings['logo_size'].get(); lh = self.settings['output_height'].get(); zone_h_log = lh * (self.settings['logo_zone_height'].get() / 1500.0)
+        target_h_log = zone_h_log * (scale / 100.0);
+        if pil_img_to_process.height <= 0: return None
+        ratio = target_h_log / pil_img_to_process.height; w_log, h_log = int(pil_img_to_process.width * ratio), int(target_h_log)
+        dw, dh = int(w_log * actual_zoom), int(h_log * actual_zoom);
+        if dw < 1 or dh < 1: return None
+        try: return pil_img_to_process.resize((dw, dh), Image.Resampling.LANCZOS)
+        except Exception as e: print(f"로고 리사이즈 오류: {e}"); return None
+
+    def update_logo_preview(self):
+        if not self.logo_preview_label or not self.logo_preview_label.winfo_exists(): return
+        path = self.settings['logo_path'].get()
+        if path and os.path.exists(path):
+            try:
+                img = Image.open(path); self.logo_preview_label.update_idletasks()
+                w = self.logo_preview_label.winfo_width() - 10; h = self.logo_preview_label.winfo_height() - 10
+                if w < 1 or h < 1: self.view.after(50, self.update_logo_preview); return
+                img.thumbnail((w,h), Image.Resampling.LANCZOS); self._logo_preview_tkimg = ImageTk.PhotoImage(img)
+                self.logo_preview_label.config(image=self._logo_preview_tkimg, text="")
+            except Exception as e: print(f"로고 미리보기 오류: {e}"); traceback.print_exc(); self.logo_preview_label.config(image="", text="오류") # Print traceback
+        else: self.logo_preview_label.config(image="", text="로고 없음\n(드래그)")
+
+    def adjust_logo_zone(self, amount: int): current = self.settings['logo_zone_height'].get(); self.settings['logo_zone_height'].set(max(10, min(current + amount, 500)))
+    def adjust_logo_size(self, amount: int): current = self.settings['logo_size'].get(); self.settings['logo_size'].set(max(10, min(current + amount, 200)))
+
+    # --- 그리드 관련 로직 ---
+    # [ ★★★★★ 여기가 수정된 함수입니다 (Target Fix) ★★★★★ ]
+    def apply_grid_layout(self):
+        # [ ★★★★★ 수정: 현재 보이는(checked) ImageLayer만 대상으로 함 ★★★★★ ]
+        images_to_layout = [l for l in self.layers if l.is_visible.get() and isinstance(l, ImageLayer)]
+        if not images_to_layout:
+            messagebox.showinfo("알림", "자동 배치할 이미지가 없습니다.\n(레이어 목록에서 이미지를 체크해주세요)")
+            return
+
+        canvas_w, canvas_h = self.view.canvas_controller.get_canvas_size(); actual_zoom = self.view.canvas_controller.fit_scale * self.get_zoom()
+        logo_zone_h = canvas_h * (self.settings['logo_zone_height'].get() / 1500.0); work_w, work_h, work_y_start = canvas_w, canvas_h - logo_zone_h, logo_zone_h
+        if work_w <= 1 or work_h <= 1: messagebox.showerror("오류", "캔버스 작업 영역 계산 오류."); return
+
+        checked_cells = sorted([(r,c) for r, row in enumerate(self.view.grid_vars) for c, var in enumerate(row) if var.get()])
+        num_images = len(images_to_layout); dests = [] # num_images는 이제 보이는 이미지 수
+        if not checked_cells: rows = int(math.sqrt(num_images)) or 1; cols = math.ceil(num_images / rows); start_r, start_c = (self.view.GRID_SIZE - rows)//2, (self.view.GRID_SIZE - cols)//2; dests = [(start_r + i//cols, start_c + i%cols) for i in range(num_images)]
+        else: dests = [checked_cells[i % len(checked_cells)] for i in range(num_images)]
+        # [ ★★★★★ 수정: images_to_layout에는 보이는 이미지만 포함됨 ★★★★★ ]
+        image_data = [{'layer': img, 'grid_r': r, 'grid_c': c} for img, (r, c) in zip(images_to_layout, dests)];
+        if not image_data: return
+
+        min_r = min(d['grid_r'] for d in image_data); min_c = min(d['grid_c'] for d in image_data); spacing = (100 - self.settings['grid_overlap'].get()) / 100.0
+        optimal_scale = 10.0; low = 10.0; high = 500.0; iterations = 25
+        print(f"DEBUG: Starting optimal scale search for {num_images} visible images. Work area: {work_w:.1f}x{work_h:.1f}") # Log clarification
+        for i in range(iterations):
+            current_scale = (low + high) / 2; print(f"DEBUG: Iter {i+1}, scale: {current_scale:.2f}")
+            # [ ★★★★★ 수정: image_data (보이는 이미지들)의 크기 계산 ★★★★★ ]
+            test_sizes = [self._get_temp_display_size(d['layer'], current_scale, actual_zoom) for d in image_data]
+            valid_sizes = [s for s in test_sizes if s and s[0] > 0 and s[1] > 0]
+            if not valid_sizes: print(f"DEBUG: No valid sizes. Reducing."); high = current_scale; continue
+            avg_w = sum(s[0] for s in valid_sizes) / len(valid_sizes); avg_h = sum(s[1] for s in valid_sizes) / len(valid_sizes); avg_w, avg_h = max(1, avg_w), max(1, avg_h); print(f"DEBUG: Avg size: {avg_w:.1f}x{avg_h:.1f}")
+            placements = [{'x':(d['grid_c']-min_c)*avg_w*spacing, 'y':(d['grid_r']-min_r)*avg_h*spacing, 'w':s[0], 'h':s[1]} for d, s in zip(image_data, test_sizes) if s and s[0]>0 and s[1]>0]
+            if not placements: print(f"DEBUG: No placements. Reducing."); high = current_scale; continue
+            min_x = min(p['x']-p['w']/2 for p in placements); max_x = max(p['x']+p['w']/2 for p in placements); min_y = min(p['y']-p['h']/2 for p in placements); max_y = max(p['y']+p['h']/2 for p in placements)
+            req_w, req_h = max_x - min_x, max_y - min_y; print(f"DEBUG: Req area: {req_w:.1f}x{req_h:.1f}")
+            if req_w < work_w and req_h < work_h: print(f"DEBUG: Fits. Trying larger."); optimal_scale = current_scale; low = current_scale
+            else: print(f"DEBUG: Too large. Reducing."); high = current_scale
+        print(f"DEBUG: Optimal scale: {optimal_scale:.2f}")
+
+        # 찾은 최적 스케일을 *현재 보이는* 이미지 레이어들에 적용
+        self.settings['global_scale'].set(round(optimal_scale, 1))
+        # apply_global_scale() 함수는 선택된 레이어에 적용, 현재 보이는 레이어만 선택
+        original_selection = {l.path for l in self.layers if l.selected}
+        for l in self.layers: l.selected = (l in images_to_layout) # Select only the visible ones being laid out
+        self.view.layer_list.update_selection_visuals(self.layers) # Update visuals (optional)
+        self.apply_global_scale() # Apply scale to currently visible layers
+        # Restore original selection
+        for l in self.layers: l.selected = (l.path in original_selection)
+        self.view.layer_list.update_selection_visuals(self.layers) # Restore visuals
+        self.view.update_idletasks() # 스케일 적용 및 캔버스 업데이트 대기
+
+        # 최종 배치 계산 (업데이트된 크기 사용 - *현재 보이는 레이어들만*)
+        scaled_data = []
+        for d in image_data: # image_data still refers to the visible layers
+            obj_info = self.view.canvas_controller.canvas_objects.get(d['layer'].path)
+            if obj_info and obj_info.get('pil_for_display'):
+                 pil_img = obj_info['pil_for_display']
+                 scaled_data.append({'obj': obj_info, 'w': pil_img.width, 'h': pil_img.height, 'grid_r': d['grid_r'], 'grid_c': d['grid_c']})
+            else:
+                print(f"WARN: Could not get updated display info for visible layer {d['layer'].path} after scaling.")
+
+        if not scaled_data: messagebox.showwarning("배치 오류", "스케일 적용 후 이미지 크기 정보를 얻지 못했습니다."); return
+
+        avg_w = sum(s['w'] for s in scaled_data) / len(scaled_data) if scaled_data else 1; avg_h = sum(s['h'] for s in scaled_data) / len(scaled_data) if scaled_data else 1; avg_w, avg_h = max(1, avg_w), max(1, avg_h)
+        placements = [{'obj': s['obj'], 'x': (s['grid_c']-min_c)*avg_w*spacing, 'y': (s['grid_r']-min_r)*avg_h*spacing, 'w':s['w'], 'h':s['h']} for s in scaled_data]
+        min_x = min(p['x']-p['w']/2 for p in placements); max_x = max(p['x']+p['w']/2 for p in placements); min_y = min(p['y']-p['h']/2 for p in placements); max_y = max(p['y']+p['h']/2 for p in placements)
+        offset_x = work_w/2 - (min_x + (max_x - min_x) / 2); offset_y = (work_y_start + work_h/2) - (min_y + (max_y - min_y) / 2)
+
+        print(f"DEBUG: Applying final placement to {len(placements)} visible images.") # Debug print
+        for p in placements:
+            final_x = p['x'] + offset_x; final_y = p['y'] + offset_y; final_x = max(p['w']/2, min(final_x, work_w - p['w']/2)); final_y = max(work_y_start + p['h']/2, min(final_y, canvas_h - p['h']/2))
+            self.view.canvas.coords(p['obj']['id'], final_x, final_y); p['obj']['rel_x'] = final_x / canvas_w if canvas_w > 0 else 0.5; p['obj']['rel_y'] = final_y / canvas_h if canvas_h > 0 else 0.5
+        self.update_status(f"자동 배치 완료 (크기: {optimal_scale:.1f}%)")
+    # [ ★★★★★ 수정된 함수 끝 ★★★★★ ]
+
+    def _get_temp_display_size(self, layer: Layer, scale: float, actual_zoom: float) -> tuple[int, int] | None:
+        """주어진 스케일과 줌 레벨에서 레이어의 예상 표시 크기(W, H)를 계산 (PIL 객체 생성 안 함)"""
+        if isinstance(layer, ImageLayer):
+            pil_to_process = None; h_orig, w_orig = 0, 0
+            try: pil = layer.pil_img_display.crop(layer.crop_box) if layer.crop_box else layer.pil_img_display; h_orig, w_orig = pil.height, pil.width
+            except AttributeError:
+                try: pil = layer.pil_img_original.crop(layer.crop_box) if layer.crop_box else layer.pil_img_original; temp_pil = pil.copy(); temp_pil.thumbnail(DISPLAY_IMG_MAX_SIZE, Image.Resampling.LANCZOS); h_orig, w_orig = temp_pil.height, temp_pil.width
+                except Exception as e: print(f"ERROR in _get_temp_display_size fallback: {e}"); traceback.print_exc(); return None
+            if h_orig <= 0: return None
+            lh = self.settings['output_height'].get(); zone_h_log = lh * (self.settings['logo_zone_height'].get() / 1500.0); target_h_log = (lh - zone_h_log) * (scale / 100.0)
+            ratio = target_h_log / h_orig; w_log = w_orig * ratio; dw, dh = int(w_log * actual_zoom), int(target_h_log * actual_zoom)
+            if dw < 1 or dh < 1: return None
+            if layer.angle != 0: rad = math.radians(layer.angle); cos, sin = abs(math.cos(rad)), abs(math.sin(rad)); bw, bh = dw*cos + dh*sin, dw*sin + dh*cos; return int(bw), int(bh)
+            else: return dw, dh
+        elif isinstance(layer, TextLayer):
+             try: font = ImageFont.truetype(FontService.get_font_path(layer.font_family), int(scale * actual_zoom))
+             except IOError: font = ImageFont.truetype(FontService.get_font_path('malgun.ttf'), int(scale*actual_zoom))
+             bbox = font.getbbox(layer.text); w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
+             if layer.angle != 0: rad = math.radians(layer.angle); cos, sin = abs(math.cos(rad)), abs(math.sin(rad)); bw, bh = w*cos + h*sin, w*sin + h*cos; return max(1,int(bw)), max(1,int(bh))
+             else: return max(1,w), max(1,h)
+        elif isinstance(layer, ShapeLayer):
+             size = scale * actual_zoom
+             if layer.angle != 0: return int(size * 1.414), int(size * 1.414) # Approx using diagonal
+             else: return int(size), int(size)
+        return None
+
+    def reset_grid(self): [var.set(False) for row in self.view.grid_vars for var in row]; self.update_status("그리드 선택 초기화.")
+    def pick_color_from_canvas(self, event):
+        x, y = self.view.canvas.canvasx(event.x), self.view.canvas.canvasy(event.y); items = self.view.canvas.find_overlapping(x-1,y-1,x+1,y+1)
+        top_id = self.view.event_handler._find_topmost_item(event, items)
+        if not top_id: self._exit_color_pick_mode("⚠️ 객체 없음."); return
+        tags = self.view.canvas.gettags(top_id);
+        if any(t in tags for t in ['border', 'handle', 'rotate_handle']): self._exit_color_pick_mode("⚠️ 핸들/테두리 불가."); return
+        path = next((t for t in tags if t not in ["item"]), None); obj_info = self.view.canvas_controller.get_object_info_by_id(top_id)
+        color = None
+        if obj_info:
+            layer = self.get_layer_by_path(path) if path != 'logo' else None
+            if layer and hasattr(layer, 'color'): color = layer.color; print(f"DBG: Color from layer attr: {color}")
+            elif obj_info.get('pil_for_display'):
+                pil = obj_info['pil_for_display']
+                try:
+                    cx, cy = self.view.canvas.coords(top_id); w, h = pil.width, pil.height; rx, ry = x-cx, y-cy; angle = obj_info.get('angle',0); rad = math.radians(-angle); cos, sin = math.cos(rad), math.sin(rad)
+                    urx, ury = rx*cos - ry*sin, rx*sin + ry*cos
+                    ix, iy = int(urx + w/2), int(ury + h/2)
+                    if 0 <= ix < w and 0 <= iy < h: p = pil.convert("RGBA").getpixel((ix,iy)); color = f"#{p[0]:02x}{p[1]:02x}{p[2]:02x}".upper() if p[3]>10 else None; print(f"DBG: Color from pixel: {color}" if color else f"DBG: Transparent pixel alpha={p[3]}")
+                    else: print(f"DBG: Coords outside image: ({ix},{iy}) vs ({w},{h})")
+                except Exception as e:
+                    self.update_status(f"⚠️ 추출 오류: {e}")
+                    print(f"ERR: Pixel extract fail: {e}")
+                    traceback.print_exc() # Print full traceback
+            else: print(f"DBG: No color attr or PIL: {path}")
+        if color: self.settings['palette_color'].set(color); self._exit_color_pick_mode(f"색상 추출: {color}")
+        else: self._exit_color_pick_mode("⚠️ 색상 정보 없거나 투명함.")
+
+    def _exit_color_pick_mode(self, msg=""): self.is_color_picking_mode = False; self.view.canvas.config(cursor=""); self.update_status(msg or "색상 추출 모드 해제.")
+
+================================================================================
+
+(13) tabs\easel\easel_tab_view.py
+--------------------------------------------------------------------------------
+# 파일 경로: tabs/easel/easel_tab_view.py (Border Fix 3)
+
+import tkinter as tk
+import tkinter.ttk as ttk # 표준 ttk 사용 (Notebook, Scrollbar, Combobox, Spinbox)
+from tkinter import filedialog, messagebox, colorchooser
+# ttkbootstrap import 제거
+import os
+import re
+import tkinter.scrolledtext as tkst # ScrolledText import
+
+# --- import 경로 수정 (유지) ---
+from .easel_controller import EaselController
+from .canvas_controller import CanvasController
+from .event_handler import EventHandler
+from .components.layer_list import LayerList
+# --- 수정 끝 ---
+
+# [ ★★★★★ NEW: 테마 임포트 ★★★★★ ]
+from ui.theme import Colors
+
+# --- 라이브러리 가용성 확인 (유지) ---
+try: from tkinterdnd2 import DND_FILES; DND_AVAILABLE = True
+except ImportError: DND_AVAILABLE = False
+
+class EaselTabView(tk.Frame):
+    GRID_SIZE = 7
+
+    def __init__(self, parent: tk.Misc, *args, **kwargs):
+        super().__init__(parent, *args, bg=Colors.WHITE, **kwargs) # Use Colors.WHITE
+        self.controller = EaselController(self)
+        self.grid_vars = [[tk.BooleanVar(value=False) for _ in range(self.GRID_SIZE)] for _ in range(self.GRID_SIZE)]
+        self._build_ui()
+        self.canvas_controller = CanvasController(self.canvas, self.controller)
+        self.event_handler = EventHandler(self.controller, self.canvas, self.canvas_controller)
+        self.controller.set_ui_references(self.logo_preview_label, self.status_label)
+        self.controller.settings['background_color'].trace_add("write", self._on_background_color_change)
+        self.controller.settings['palette_color'].trace_add("write", self._on_palette_color_change)
+        self.controller.settings['zoom'].trace_add("write", self._on_zoom_change) # Use _on_zoom_change
+        self.controller.settings['logo_path'].trace_add("write", lambda *args: self.controller.update_logo_preview())
+        self.controller.settings['logo_zone_height'].trace_add("write", self._on_logo_zone_change)
+        self.controller.settings['logo_size'].trace_add("write", lambda *args: self.controller.update_logo_object_display())
+        self._on_palette_color_change()
+        self.viewport_frame.bind("<Configure>", self._update_canvas_view)
+        self.logo_preview_label.bind("<Configure>", lambda e: self.controller.update_logo_preview())
+
+    def _build_ui(self) -> None:
+        self.grid_columnconfigure(0, weight=1); self.grid_columnconfigure(1, weight=0)
+        content_frame = tk.Frame(self, bg=Colors.WHITE); content_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=tk.YES)
+        content_frame.grid_columnconfigure(0, weight=1); content_frame.grid_columnconfigure(1, weight=0); content_frame.grid_rowconfigure(0, weight=1)
+        canvas_container = self._create_canvas_panel(content_frame)
+        control_panel = self._create_control_panel(content_frame)
+        canvas_container.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        control_panel.grid(row=0, column=1, sticky="ns", padx=(5, 0))
+        bottom_frame = self._create_bottom_bar(); bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=2)
+
+    def _create_canvas_panel(self, parent: tk.Frame) -> tk.LabelFrame:
+        container = tk.LabelFrame(parent, text="Canvas", bg=Colors.WHITE, fg=Colors.DARK_TEAL, bd=1, relief=tk.SOLID, padx=5, pady=5)
+        container.rowconfigure(0, weight=1); container.columnconfigure(0, weight=1)
+        self.viewport_frame = tk.Frame(container, bg=Colors.WHITE); self.viewport_frame.grid(row=0, column=0, sticky="nsew")
+        self.viewport_frame.grid_rowconfigure(0, weight=1); self.viewport_frame.grid_columnconfigure(0, weight=1)
+        self.viewport = tk.Canvas(self.viewport_frame, bd=0, highlightthickness=0, bg=Colors.WHITE)
+        v_scroll = ttk.Scrollbar(self.viewport_frame, orient=tk.VERTICAL, command=self.viewport.yview)
+        h_scroll = ttk.Scrollbar(self.viewport_frame, orient=tk.HORIZONTAL, command=self.viewport.xview)
+        self.viewport.config(yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
+        self.viewport.grid(row=0, column=0, sticky="nsew"); v_scroll.grid(row=0, column=1, sticky="ns"); h_scroll.grid(row=1, column=0, sticky="ew")
+        self.canvas = tk.Canvas(self.viewport, bg=self.controller.settings['background_color'].get(), highlightthickness=0)
+        self.canvas_window_id = self.viewport.create_window((0, 0), window=self.canvas, anchor="nw")
+        self.canvas.bind("<Configure>", lambda e: self.viewport.config(scrollregion=self.viewport.bbox("all")))
+        zoom_frame = self._create_zoom_panel(container); zoom_frame.grid(row=1, column=0, sticky="ew", pady=(5, 0))
+        return container
+
+    def _create_zoom_panel(self, parent: tk.Frame) -> tk.Frame:
+        frame = tk.Frame(parent, bg=Colors.WHITE, pady=5)
+        tk.Label(frame, text="확대/축소:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(side=tk.LEFT, padx=(0, 2))
+        scale = tk.Scale(frame, from_=50, to=200, variable=self.controller.settings['zoom'], orient=tk.HORIZONTAL, bg=Colors.WHITE, fg=Colors.DARK_TEAL, highlightthickness=0, bd=0, sliderlength=15, length=100, troughcolor=Colors.GREY)
+        scale.pack(side=tk.LEFT, fill=tk.X, expand=tk.YES)
+        zoom_label = tk.Label(frame, text="100%", width=5, bg=Colors.WHITE, fg=Colors.DARK_TEAL); zoom_label.pack(side=tk.LEFT, padx=(2, 0))
+        def update_zoom_label(value): zoom_label.config(text=f"{int(float(value))}%")
+        self.controller.settings['zoom'].trace_add("write", lambda *args: update_zoom_label(self.controller.settings['zoom'].get()))
+        return frame
+
+    def _create_control_panel(self, parent: tk.Frame) -> tk.Frame:
+        container = tk.Frame(parent, bg=Colors.WHITE); container.rowconfigure(0, weight=1)
+        left_column = tk.Frame(container, bg=Colors.WHITE); left_column.grid(row=0, column=0, sticky="ns", padx=(0, 3)); left_column.rowconfigure(1, weight=1)
+        right_column = tk.Frame(container, bg=Colors.WHITE); right_column.grid(row=0, column=1, sticky="ns"); right_column.rowconfigure(0, weight=1)
+        self._create_canvas_settings_panel(left_column).grid(row=0, column=0, sticky="ew")
+        self._create_layer_panel(left_column).grid(row=1, column=0, sticky="nsew", pady=(5,0))
+        self._create_project_settings_panel(left_column).grid(row=2, column=0, sticky="ew", pady=(5,0))
+        self._create_logo_panel(right_column).grid(row=0, column=0, sticky='nsew')
+        self._create_decoration_panel(right_column).grid(row=1, column=0, sticky='ew', pady=(5,0))
+        self._create_auto_layout_panel(right_column).grid(row=2, column=0, sticky='ew', pady=(5,0))
+        self._create_image_output_panel(right_column).grid(row=3, column=0, sticky='ew', pady=(5,0))
+        return container
+
+    def _create_canvas_settings_panel(self, parent: tk.Frame) -> tk.LabelFrame:
+        frame = tk.LabelFrame(parent, text="< Setting >", bg=Colors.WHITE, fg=Colors.DARK_TEAL, bd=1, relief=tk.SOLID, padx=3, pady=3)
+        res_frame = tk.Frame(frame, bg=Colors.WHITE); res_frame.pack(fill=tk.X)
+        tk.Label(res_frame, text="해상도 (가로x세로):", bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(anchor=tk.W)
+        inputs_frame = tk.Frame(res_frame, bg=Colors.WHITE); inputs_frame.pack(fill=tk.X, pady=2)
+        tk.Spinbox(inputs_frame, from_=100, to=8000, textvariable=self.controller.settings['output_width'], width=6).pack(side=tk.LEFT, expand=tk.YES, fill=tk.X, padx=(0, 2))
+        tk.Label(inputs_frame, text="x", bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(side=tk.LEFT)
+        tk.Spinbox(inputs_frame, from_=100, to=8000, textvariable=self.controller.settings['output_height'], width=6).pack(side=tk.LEFT, expand=tk.YES, fill=tk.X, padx=(2, 3))
+        tk.Button(inputs_frame, text="적용", command=self._apply_resolution, width=5, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(side=tk.LEFT)
+        return frame
+
+    def _create_logo_panel(self, parent: tk.Frame) -> tk.LabelFrame:
+        frame = tk.LabelFrame(parent, text="< Logo >", bg=Colors.WHITE, fg=Colors.DARK_TEAL, bd=1, relief=tk.SOLID, padx=3, pady=3)
+        frame.columnconfigure(0, weight=1); frame.rowconfigure(0, weight=1)
+        logo_preview_container = tk.Frame(frame, bg=Colors.GREY); logo_preview_container.pack(fill=tk.BOTH, expand=True, pady=(0,3))
+        self.logo_preview_label = tk.Label(logo_preview_container, text="로고 없음\n(파일을 여기로 드래그)", anchor=tk.CENTER, bg=Colors.GREY, fg=Colors.WHITE); self.logo_preview_label.pack(fill=tk.BOTH, expand=True)
+        if DND_AVAILABLE: self.logo_preview_label.drop_target_register(DND_FILES); self.logo_preview_label.dnd_bind("<<Drop>>", self.controller.on_logo_panel_drop)
+        logo_btn_frame = tk.Frame(frame, bg=Colors.WHITE); logo_btn_frame.pack(fill=tk.X, pady=(0, 3))
+        tk.Button(logo_btn_frame, text="로고 선택", command=self.controller.select_logo, width=15, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0,1))
+        tk.Button(logo_btn_frame, text="로고 삭제", command=self.controller.delete_logo, width=15, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARKER_RED).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(1,0))
+        logo_controls_frame = tk.Frame(frame, bg=Colors.WHITE); logo_controls_frame.pack(fill=tk.X, pady=2); logo_controls_frame.columnconfigure((0, 1), weight=1)
+        logo_zone_frame = tk.Frame(logo_controls_frame, bg=Colors.WHITE); logo_zone_frame.grid(row=0, column=0, sticky='w')
+        tk.Label(logo_zone_frame, text="구역 높이:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(side=tk.LEFT)
+        tk.Button(logo_zone_frame, text="-", width=2, command=lambda: self.controller.adjust_logo_zone(-10), bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(side=tk.LEFT, padx=(3,0))
+        tk.Label(logo_zone_frame, textvariable=self.controller.settings['logo_zone_height'], width=4, anchor=tk.CENTER, bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(side=tk.LEFT)
+        tk.Button(logo_zone_frame, text="+", width=2, command=lambda: self.controller.adjust_logo_zone(10), bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(side=tk.LEFT)
+        logo_size_frame = tk.Frame(logo_controls_frame, bg=Colors.WHITE); logo_size_frame.grid(row=0, column=1, sticky='e')
+        tk.Label(logo_size_frame, text="로고 크기:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(side=tk.LEFT)
+        tk.Button(logo_size_frame, text="-", width=2, command=lambda: self.controller.adjust_logo_size(-5), bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(side=tk.LEFT, padx=(3,0))
+        tk.Label(logo_size_frame, textvariable=self.controller.settings['logo_size'], width=4, anchor=tk.CENTER, bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(side=tk.LEFT)
+        tk.Button(logo_size_frame, text="+", width=2, command=lambda: self.controller.adjust_logo_size(5), bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(side=tk.LEFT)
+        return frame
+
+    def _create_auto_layout_panel(self, parent: tk.Frame) -> tk.LabelFrame:
+        frame = tk.LabelFrame(parent, text="< Automatic Placement >", bg=Colors.WHITE, fg=Colors.DARK_TEAL, bd=1, relief=tk.SOLID, padx=3, pady=3)
+        container = tk.Frame(frame, bg=Colors.WHITE); container.pack(fill=tk.X); container.columnconfigure(0, weight=1); container.columnconfigure(1, weight=0)
+        grid_inner_frame = tk.Frame(container, bg=Colors.WHITE); grid_inner_frame.grid(row=0, column=0, sticky='ns')
+        for r, row_vars in enumerate(self.grid_vars):
+            for c, var in enumerate(row_vars):
+                cb = tk.Checkbutton(grid_inner_frame, variable=var, bg=Colors.WHITE, activebackground=Colors.WHITE, selectcolor=Colors.WHITE, relief=tk.FLAT, bd=0); cb.grid(row=r, column=c, padx=1, pady=1)
+        right_controls_frame = tk.Frame(container, bg=Colors.WHITE); right_controls_frame.grid(row=0, column=1, sticky='ns', padx=(10,0))
+        overlap_frame = tk.Frame(right_controls_frame, bg=Colors.WHITE); overlap_frame.pack(fill=tk.X, pady=3)
+        tk.Label(overlap_frame, text="겹침(%):", bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(side=tk.LEFT)
+        tk.Spinbox(overlap_frame, from_=0, to=100, textvariable=self.controller.settings['grid_overlap'], width=5, increment=5).pack(side=tk.LEFT, padx=3)
+        tk.Button(right_controls_frame, text="배치 적용", command=self.controller.apply_grid_layout, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARKER_RED).pack(fill=tk.X, pady=2)
+        tk.Button(right_controls_frame, text="초기화", command=self.controller.reset_grid, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(fill=tk.X, pady=2)
+        return frame
+
+    def _create_layer_panel(self, parent: tk.Frame) -> tk.LabelFrame:
+        frame = tk.LabelFrame(parent, text="< Layer >", bg=Colors.WHITE, fg=Colors.DARK_TEAL, bd=1, relief=tk.SOLID, padx=3, pady=3)
+        top_controls = tk.Frame(frame, bg=Colors.WHITE); top_controls.pack(fill=tk.X)
+        check_all_frame = tk.Frame(top_controls, bg=Colors.WHITE); check_all_frame.pack(side=tk.LEFT, padx=(8, 0))
+        self.check_all_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(check_all_frame, variable=self.check_all_var, command=self._toggle_all_checks, bg=Colors.WHITE, activebackground=Colors.WHITE, selectcolor=Colors.MAIN_RED, relief=tk.FLAT, bd=0).pack(side=tk.LEFT)
+        self.select_all_button = tk.Button(check_all_frame, text="전체선택", width=7, command=self.controller.toggle_all_layer_selection, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY); self.select_all_button.pack(side=tk.LEFT, padx=2)
+        right_controls = tk.Frame(top_controls, bg=Colors.WHITE); right_controls.pack(side=tk.RIGHT)
+        tk.Label(right_controls, text="일괄 크기:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(side=tk.LEFT)
+        tk.Spinbox(right_controls, from_=10, to=500, textvariable=self.controller.settings['global_scale'], width=5, increment=5.0).pack(side=tk.LEFT, padx=3)
+        tk.Button(right_controls, text="적용", command=self.controller.apply_global_scale, width=5, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARKER_RED).pack(side=tk.LEFT)
+        action_buttons = tk.Frame(frame, bg=Colors.WHITE, pady=3); action_buttons.pack(fill=tk.X); action_buttons.columnconfigure((0, 1), weight=1)
+        tk.Button(action_buttons, text="이미지 추가", command=self._add_files, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).grid(row=0, column=0, sticky="ew", padx=(0,1))
+        tk.Button(action_buttons, text="선택 삭제", command=self.controller.delete_selected_layers, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARKER_RED).grid(row=0, column=1, sticky="ew", padx=(1,0))
+        self.layer_list = LayerList(frame, self.controller); self.layer_list.pack(fill=tk.BOTH, expand=True, pady=(0,3))
+        return frame
+
+    def _create_project_settings_panel(self, parent: tk.Frame) -> tk.LabelFrame:
+        frame = tk.LabelFrame(parent, text="< Project >", bg=Colors.WHITE, fg=Colors.DARK_TEAL, bd=1, relief=tk.SOLID, padx=3, pady=3)
+        btn_frame = tk.Frame(frame, bg=Colors.WHITE); btn_frame.pack(fill=tk.X); btn_frame.columnconfigure((0,1), weight=1)
+        tk.Button(btn_frame, text="저장", command=self.controller.save_project, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARKER_RED).grid(row=0, column=0, sticky="ew", padx=(0,1))
+        tk.Button(btn_frame, text="불러오기", command=self.controller.load_project, bg=Colors.DARK_TEAL, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_TEAL_ACTIVE).grid(row=0, column=1, sticky="ew", padx=(1,0))
+        tk.Button(frame, text="전체 초기화", command=self.controller.clear_all, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARKER_RED).pack(fill=tk.X, pady=(3,0))
+        return frame
+
+    def _create_image_output_panel(self, parent: tk.Frame) -> tk.LabelFrame:
+        frame = tk.LabelFrame(parent, text="< Output Image >", bg=Colors.WHITE, fg=Colors.DARK_TEAL, bd=1, relief=tk.SOLID, padx=3, pady=3)
+        inner = tk.Frame(frame, bg=Colors.WHITE); inner.pack(fill=tk.BOTH, expand=True)
+        tk.Label(inner, text="파일명:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(anchor=tk.W)
+        tk.Entry(inner, textvariable=self.controller.settings['style_code'], justify=tk.CENTER).pack(fill=tk.X, pady=(0,3))
+        tk.Label(inner, text="파일 형식:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(anchor=tk.W)
+        ttk.Combobox(inner, textvariable=self.controller.settings['output_format'], values=["PNG", "JPG"], state="readonly").pack(fill=tk.X, pady=(0,3))
+        tk.Label(inner, text="저장 위치:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(anchor=tk.W)
+        tk.Button(inner, text="폴더 선택", command=self._select_save_directory, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(fill=tk.X)
+        tk.Button(inner, text="이미지 저장", command=self.controller.save_image, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARKER_RED).pack(fill=tk.X, pady=(8,0))
+        return frame
+
+    def _create_decoration_panel(self, parent: tk.Frame) -> tk.LabelFrame:
+        frame = tk.LabelFrame(parent, text="< Asset >", bg=Colors.WHITE, fg=Colors.DARK_TEAL, bd=1, relief=tk.SOLID, padx=3, pady=3)
+        inner = tk.Frame(frame, bg=Colors.WHITE, pady=5); inner.pack(fill=tk.BOTH, expand=True)
+        add_frame = tk.Frame(inner, bg=Colors.WHITE); add_frame.pack(fill=tk.X); add_frame.columnconfigure((0,1), weight=1)
+        tk.Button(add_frame, text="텍스트 추가", command=self.controller.add_new_text_layer, bg=Colors.DARK_TEAL, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_TEAL_ACTIVE).grid(row=0, column=0, sticky='ew', padx=(0,1))
+        tk.Button(add_frame, text="도형 추가", command=self.controller.add_new_shape_layer, bg=Colors.DARK_TEAL, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_TEAL_ACTIVE).grid(row=0, column=1, sticky='ew', padx=(1,0))
+        separator = tk.Frame(inner, height=1, bg=Colors.GREY); separator.pack(fill=tk.X, pady=8)
+        palette_frame = tk.Frame(inner, bg=Colors.WHITE); palette_frame.pack(fill=tk.X)
+        self.palette_color_preview = tk.Canvas(palette_frame, width=30, height=28, highlightthickness=1, highlightbackground=Colors.GREY, cursor="hand2", bd=0); self.palette_color_preview.pack(side=tk.LEFT); self.palette_color_preview.bind("<Button-1>", self._choose_palette_color)
+        tk.Label(palette_frame, textvariable=self.controller.settings['palette_color'], width=8, anchor=tk.CENTER, bg=Colors.WHITE, fg=Colors.DARK_TEAL).pack(side=tk.LEFT, padx=5)
+        tk.Button(palette_frame, text="색상 추출", command=self._enter_color_pick_mode, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        apply_frame = tk.Frame(inner, bg=Colors.WHITE); apply_frame.pack(fill=tk.X, pady=(8,0)); apply_frame.columnconfigure((0,1), weight=1)
+        tk.Button(apply_frame, text="대상색상변경", command=lambda: print("TODO"), bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).grid(row=0, column=0, sticky='ew', padx=(0,1))
+        tk.Button(apply_frame, text="배경색상변경", command=self._apply_color_to_background, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).grid(row=0, column=1, sticky='ew', padx=(1,0))
+        return frame
+
+    def _create_bottom_bar(self) -> tk.Frame:
+        frame = tk.Frame(self, bg=Colors.WHITE); frame.columnconfigure(0, weight=1)
+        self.status_label = tk.Label(frame, text="", bg=Colors.WHITE, fg=Colors.GREY); self.status_label.grid(row=0, column=0, sticky="w")
+        return frame
+
+    # --- UI Event Handlers & Callbacks ---
+    def update_status(self, text: str): self.status_label.config(text=text)
+    def _on_background_color_change(self, *args): color = self.controller.settings['background_color'].get(); self.canvas.configure(bg=color)
+    def _on_palette_color_change(self, *args): color = self.controller.settings['palette_color'].get(); self.palette_color_preview.config(bg=color)
+    def _on_zoom_change(self, *args): self._update_canvas_size_and_redraw()
+    def _on_logo_zone_change(self, *args): self.controller.update_logo_object_display(); self._update_canvas_size_and_redraw()
+    def _update_canvas_view(self, event=None):
+        w, h = self.viewport_frame.winfo_width(), self.viewport_frame.winfo_height()
+        if w <= 1 or h <= 1: return
+        lw, lh = self.controller.settings['output_width'].get(), self.controller.settings['output_height'].get()
+        if lw <= 0 or lh <= 0: return
+        sx, sy = (w * 0.9) / lw, (h * 0.9) / lh
+        self.canvas_controller.fit_scale = min(sx, sy); self._update_canvas_size_and_redraw()
+
+    # [ ★★★★★ 여기가 수정된 함수입니다 (Border Fix 3) ★★★★★ ]
+    def _update_canvas_size_and_redraw(self):
+        zoom = self.controller.get_zoom()
+        w, h = self.canvas_controller.get_canvas_size(zoom)
+        self.canvas.config(width=w, height=h)
+        # --- 점선 테두리 코드 추가 ---
+        self.canvas.delete('border') # 기존 테두리 삭제
+        if w > 1 and h > 1: # 유효한 크기일 때만 그림
+            border_id = self.canvas.create_rectangle(1, 1, w-2, h-2, dash=(5, 3), outline=Colors.GREY, tags='border') # Use 1px inset
+            self.canvas.tag_lower(border_id) # 다른 객체들 뒤로 보냄
+        # --- 추가 끝 ---
+        self.canvas_controller.update_all_objects_display(zoom)
+        self._center_canvas_in_viewport()
+    # [ ★★★★★ 수정된 함수 끝 ★★★★★ ]
+
+    def _center_canvas_in_viewport(self):
+        self.viewport.update_idletasks()
+        vp_w, vp_h = self.viewport.winfo_width(), self.viewport.winfo_height()
+        cv_w, cv_h = int(self.canvas.cget("width")), int(self.canvas.cget("height"))
+        x, y = max(0, (vp_w - cv_w) // 2), max(0, (vp_h - cv_h) // 2)
+        self.viewport.coords(self.canvas_window_id, x, y)
+    def _add_files(self): files = filedialog.askopenfilenames(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")]); self.controller.add_new_image_layers(files)
+    def _apply_resolution(self): self.controller.settings['zoom'].set(100); self._update_canvas_view()
+    def _toggle_all_checks(self): checked = self.check_all_var.get(); [l.is_visible.set(checked) for l in self.controller.get_layers()]; [self.controller.toggle_layer_visibility(l) for l in self.controller.get_layers()]
+    def _select_save_directory(self): directory = filedialog.askdirectory(initialdir=self.controller.settings['save_directory'].get()); self.controller.settings['save_directory'].set(directory); messagebox.showinfo("저장 위치", f"저장 위치가\n'{directory}'\n로 설정됨.")
+    def _choose_palette_color(self, event=None): color = colorchooser.askcolor(title="색상 선택", initialcolor=self.controller.settings['palette_color'].get()); self.controller.settings['palette_color'].set(color[1].upper())
+    def _apply_color_to_background(self): color = self.controller.settings['palette_color'].get(); self.controller.settings['background_color'].set(color); self.update_status(f"배경색 변경: {color}")
+    def _enter_color_pick_mode(self): self.controller.is_color_picking_mode = True; self.canvas.config(cursor="crosshair"); self.update_status("🎨 색상 추출 모드: 캔버스 클릭")
+    def update_select_all_button_state(self): layers = self.controller.get_layers(); all_selected = layers and all(l.selected for l in layers); self.select_all_button.config(text="선택해제" if all_selected else "전체선택", bg=Colors.DARK_GREY if all_selected else Colors.GREY)
+
+================================================================================
+
+(14) tabs\easel\event_handler.py
+--------------------------------------------------------------------------------
+import tkinter as tk
+import math
+
+class EventHandler:
+    """캔버스, 레이어 리스트 등에서 발생하는 모든 사용자 입력을 처리하는 클래스"""
+    def __init__(self, controller, canvas, canvas_controller):
+        self.controller = controller # EaselController 참조
+        self.canvas = canvas
+        self.canvas_controller = canvas_controller
+        self._drag_data = {"x": 0, "y": 0, "item": None}
+        self._resize_data = {}
+        self._rotation_data = {}
+
+        self._bind_events()
+
+    def _bind_events(self):
+        self.canvas.bind("<ButtonPress-1>", self._on_press)
+        self.canvas.bind("<B1-Motion>", self._on_motion)
+        self.canvas.bind("<ButtonRelease-1>", self._on_release)
+        self.canvas.bind("<Double-Button-1>", self._on_canvas_double_click) # 더블클릭 이벤트
+
+    def _on_press(self, event: tk.Event):
+        if self.controller.is_color_picking_mode:
+            self.controller.pick_color_from_canvas(event)
+            return
+
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        overlapping = self.canvas.find_overlapping(x - 1, y - 1, x + 1, y + 1)
+
+        # 핸들러 클릭 확인
+        handle = next((i for i in overlapping if "handle" in self.canvas.gettags(i) or "rotate_handle" in self.canvas.gettags(i)), None)
+        if handle and self.canvas_controller.active_selection_path:
+            self._start_resize_or_rotate(event, handle, x, y)
+            return
+
+        topmost_item_id = self._find_topmost_item(event, overlapping)
+
+        path = None
+        if topmost_item_id:
+            self._drag_data = {"item": topmost_item_id, "x": x, "y": y}
+            tags = self.canvas.gettags(topmost_item_id)
+            path = "logo" if "logo" in tags else next((tag for tag in tags if tag != "item"), None)
+
+        # 레이어 선택 로직 호출 (Ctrl/Shift 키 상태 전달)
+        # 이 함수 내부에서 리스트 하이라이트 등 처리
+        self.controller.select_layer_from_canvas(path, event.state)
+
+        # --- [ ★★★★★ 수정: 클릭 시 핸들 활성화 *제거* ★★★★★ ] ---
+        # 핸들 활성화는 더블클릭 시에만 수행
+
+        # 클릭 시 path가 없는데 Ctrl키도 안 눌렀으면 핸들 제거 (선택 해제 시)
+        if not path and not ((event.state & 0x0004)): # 0x0004는 Control 키 마스크
+             self.canvas_controller.clear_resize_handles()
+
+
+    def _on_motion(self, event: tk.Event):
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+
+        if self._rotation_data:
+            self.canvas_controller.process_rotation(x, y, self._rotation_data)
+            return
+
+        if self._resize_data:
+            self.canvas_controller.process_resizing(x, y, self._resize_data)
+            return
+
+        if self._drag_data.get("item"):
+            item_id = self._drag_data["item"]
+            dx = x - self._drag_data["x"]
+            dy = y - self._drag_data["y"]
+            self.canvas.move(item_id, dx, dy)
+            self._drag_data.update(x=x, y=y)
+
+
+    def _on_release(self, event: tk.Event):
+        path = self.canvas_controller.active_selection_path
+
+        if self._resize_data or self._rotation_data:
+            self.canvas_controller.finalize_resize_or_rotate(path)
+            self._resize_data, self._rotation_data = {}, {}
+            self.canvas.config(cursor="")
+            return
+
+        if self._drag_data.get("item"):
+            item_id = self._drag_data["item"]
+            tags = self.canvas.gettags(item_id)
+            release_path = "logo" if "logo" in tags else next((tag for tag in tags if tag != "item"), None)
+
+            if release_path:
+                self.canvas_controller.finalize_object_move(release_path)
+
+            self._drag_data["item"] = None
+
+    def _on_canvas_double_click(self, event: tk.Event):
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        item_ids = self.canvas.find_closest(x, y)
+        path = None
+        if item_ids:
+            item_id = item_ids[0]
+            tags = self.canvas.gettags(item_id)
+            # 핸들이나 보더 제외
+            if 'border' not in tags and 'handle' not in tags and 'rotate_handle' not in tags:
+                path = "logo" if "logo" in tags else next((tag for tag in tags if tag != "item"), None)
+
+        if path:
+             # --- [ ★★★★★ 수정: 더블클릭 시 핸들 활성화 *추가* ★★★★★ ] ---
+             self.canvas_controller.activate_resize_handles(path)
+             # --- [ ★★★★★ 수정 완료 ★★★★★ ] ---
+
+             if path != 'logo': # 로고는 속성 편집 없음
+                 layer = self.controller.get_layer_by_path(path)
+                 if layer:
+                     self.controller.edit_layer_properties(layer)
+        # 빈 공간 더블클릭 시 아무것도 안 함 (선택 해제 등 불필요)
+
+
+    def _start_resize_or_rotate(self, event, handle, x, y):
+        path = self.canvas_controller.active_selection_path
+        # 로고 핸들 클릭 시에도 리사이즈/회전 안 함
+        if not path or path == 'logo':
+             if path == 'logo': # 로고 핸들 클릭 시 커서만 변경
+                  tags = self.canvas.gettags(handle)
+                  if "rotate_handle" in tags: self.canvas.config(cursor="exchange")
+                  else: self.canvas.config(cursor="sizing")
+             return
+
+        if path not in self.canvas_controller.canvas_objects:
+             print(f"경고: 활성 경로 '{path}'가 canvas_objects에 없습니다.")
+             return
+
+        item_id = self.canvas_controller.canvas_objects[path]['id']
+        tags = self.canvas.gettags(handle)
+        layer = self.controller.get_layer_by_path(path)
+        if not layer: return
+
+        if "rotate_handle" in tags:
+            self.canvas.config(cursor="exchange") # 회전 커서
+            bbox = self.canvas.bbox(item_id)
+            if not bbox: return
+            center_x, center_y = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
+            start_angle = math.degrees(math.atan2(y - center_y, x - center_x))
+            self._rotation_data = {
+                "item_id": item_id, "center_x": center_x, "center_y": center_y,
+                "start_angle": start_angle, "initial_item_angle": layer.angle
+            }
+        else: # 리사이즈 핸들
+            self.canvas.config(cursor="sizing") # 리사이즈 커서
+            handle_type = next((t for t in tags if t not in ["handle", "item"]), None)
+            if handle_type:
+                bbox = self.canvas.bbox(item_id)
+                if not bbox: return
+                self._resize_data = {
+                    "item_id": item_id, "handle_type": handle_type,
+                    "start_x": x, "start_y": y, "start_bbox": bbox,
+                    "is_cropping": (event.state & 0x0004) != 0 # Ctrl 키 누름 여부
+                }
+
+    def _is_pixel_transparent(self, event: tk.Event, item_id: int) -> bool:
+        obj_info = self.canvas_controller.get_object_info_by_id(item_id)
+        is_checkable = obj_info and (obj_info.get('type') in ['image', 'text', 'logo'] or
+                                       (obj_info.get('type') == 'shape' and obj_info.get('shape_type') == '자유곡선'))
+        if not is_checkable:
+            return False
+
+        pil_img = obj_info.get('pil_for_display')
+        if not pil_img or pil_img.mode != 'RGBA':
+             return False
+
+        try:
+            canvas_x, canvas_y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+            coords = self.canvas.coords(item_id)
+            center_x, center_y = coords[0], coords[1]
+            img_w, img_h = pil_img.width, pil_img.height
+
+            rel_x, rel_y = canvas_x - center_x, canvas_y - center_y
+
+            angle_rad = math.radians(-obj_info.get('angle', 0.0))
+            cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
+            unrotated_rel_x = rel_x * cos_a - rel_y * sin_a
+            unrotated_rel_y = rel_x * sin_a + rel_y * cos_a
+
+            img_x = unrotated_rel_x + img_w / 2
+            img_y = unrotated_rel_y + img_h / 2
+
+            if not (0 <= img_x < img_w and 0 <= img_y < img_h):
+                return True
+
+            return pil_img.getpixel((int(img_x), int(img_y)))[3] < 10
+
+        except Exception as e:
+            print(f"투명도 체크 오류: {e}")
+            return True
+
+    def _find_topmost_item(self, event, overlapping_items):
+        all_items_in_order = self.canvas.find_all()
+        for item_id in reversed(all_items_in_order):
+            tags = self.canvas.gettags(item_id)
+            if 'item' in tags and "handle" not in tags and "rotate_handle" not in tags and item_id in overlapping_items:
+                 is_logo = "logo" in tags
+                 layer_path = next((tag for tag in tags if tag != "item" and tag != "logo"), None)
+                 if is_logo or (layer_path and layer_path in self.canvas_controller.canvas_objects):
+                      if not self._is_pixel_transparent(event, item_id):
+                           return item_id
+        return None
+
+================================================================================
+
+(15) tabs\easel\models\__init__.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(16) tabs\easel\models\layer.py
+--------------------------------------------------------------------------------
+import tkinter as tk
+import os
+import random
+import math
+from PIL import Image, ImageTk, ImageDraw, ImageFont
+# --- import 경로 수정 ---
+from ..services.font_service import FontService
+# --- 수정 끝 ---
+
+# --- 상수 정의 ---
+THUMBNAIL_SIZE = (48, 48)
+DISPLAY_IMG_MAX_SIZE = (800, 800)
+SAVE_IMG_MAX_SIZE = (2000, 2000)
+
+class Layer:
+    """모든 레이어 타입의 기본이 되는 추상 기본 클래스"""
+    def __init__(self, layer_type: str):
+        # 고유 ID 생성 방식 변경 (더 짧게)
+        self.path = f"{layer_type}_{random.randint(1000, 9999)}_{hex(int(tk._default_root.tk.call('clock', 'milliseconds')))[-4:]}"
+        self.type = layer_type
+        self.is_visible = tk.BooleanVar(value=False)
+        self.angle = 0.0
+        self.selected = False
+        self.widget_ref = None
+
+    def get_display_name(self) -> str:
+        raise NotImplementedError
+
+    def create_thumbnail(self) -> ImageTk.PhotoImage:
+        raise NotImplementedError
+
+class ImageLayer(Layer):
+    """이미지 레이어를 위한 데이터 클래스"""
+    def __init__(self, file_path: str):
+        super().__init__('image')
+        self.path = file_path # 이미지 레이어는 파일 경로를 고유 ID로 사용
+        self.scale_var = tk.DoubleVar(value=30.0)
+
+        try:
+            # 원본 이미지는 필요할 때만 로드하도록 경로만 저장 (메모리 절약 고려)
+            # self.pil_img_original_path = file_path
+            # 우선은 기존 방식 유지 (배경 제거 등 위해 필요)
+            self.pil_img_original = Image.open(file_path).convert("RGBA")
+
+            self.pil_img_save = self.pil_img_original.copy()
+            self.pil_img_save.thumbnail(SAVE_IMG_MAX_SIZE, Image.Resampling.LANCZOS)
+
+            self.pil_img_display = self.pil_img_save.copy()
+            self.pil_img_display.thumbnail(DISPLAY_IMG_MAX_SIZE, Image.Resampling.LANCZOS)
+
+            self.crop_box = None
+            self.thumbnail = self.create_thumbnail()
+            self._thumbnail_ref = self.thumbnail # GC 방지
+
+        except Exception as e:
+            print(f"Error loading image {file_path}: {e}")
+            raise
+
+    def get_display_name(self) -> str:
+        return os.path.basename(self.path)
+
+    def create_thumbnail(self) -> ImageTk.PhotoImage:
+        thumb_img = self.pil_img_display.copy()
+        thumb_img.thumbnail(THUMBNAIL_SIZE, Image.Resampling.LANCZOS)
+        return ImageTk.PhotoImage(thumb_img)
+
+    def get_pil_image_to_process(self):
+        """크롭 박스를 적용한 표시용 이미지를 반환"""
+        # 원본 대신 표시용(축소된) 이미지 사용 (성능 향상)
+        return self.pil_img_display.crop(self.crop_box) if self.crop_box else self.pil_img_display
+
+class TextLayer(Layer):
+    """텍스트 레이어를 위한 데이터 클래스"""
+    def __init__(self, text, font_family, font_size, color):
+        super().__init__('text')
+        self.text = text
+        self.font_family = font_family
+        self.scale_var = tk.DoubleVar(value=font_size) # 텍스트에서는 크기가 scale_var
+        self.color = color
+        self.thumbnail = self.create_thumbnail()
+        self._thumbnail_ref = self.thumbnail # GC 방지
+
+    def get_display_name(self) -> str:
+        return self.text
+
+    def create_thumbnail(self) -> ImageTk.PhotoImage:
+        thumb = Image.new('RGBA', THUMBNAIL_SIZE, (255, 255, 255, 220))
+        draw = ImageDraw.Draw(thumb)
+        try:
+            # FontService 사용
+            font = ImageFont.truetype(FontService.get_font_path('malgun.ttf'), 32)
+            draw.text((8, 4), "T", font=font, fill="#555555")
+        except IOError:
+            draw.text((8, 4), "T", fill="#555555") # 폴백
+        return ImageTk.PhotoImage(thumb)
+
+class ShapeLayer(Layer):
+    """도형 레이어를 위한 데이터 클래스"""
+    def __init__(self, shape_type, color, pil_image=None):
+        super().__init__('shape')
+        self.shape_type = shape_type
+        self.color = color
+        self.scale_var = tk.DoubleVar(value=100.0)
+        self.pil_image = pil_image # 자유곡선인 경우에만 사용
+        self.thumbnail = self.create_thumbnail()
+        self._thumbnail_ref = self.thumbnail # GC 방지
+
+    def get_display_name(self) -> str:
+        return self.shape_type
+
+    def create_thumbnail(self) -> ImageTk.PhotoImage:
+        thumb = Image.new('RGBA', THUMBNAIL_SIZE, (255, 255, 255, 220))
+        draw = ImageDraw.Draw(thumb)
+
+        if self.shape_type == '자유곡선' and self.pil_image:
+            try:
+                img = self.pil_image.copy()
+                img.thumbnail((40, 40), Image.Resampling.LANCZOS)
+                thumb.paste(img, (4, 4), img)
+            except Exception as e:
+                print(f"자유곡선 썸네일 생성 오류: {e}")
+                # 오류 시 기본 도형 아이콘 표시 (선택 사항)
+                draw.line([(5,5), (43,43)], fill="#555555", width=2)
+                draw.line([(5,43), (43,5)], fill="#555555", width=2)
+        else:
+            size, padding = 36, (THUMBNAIL_SIZE[0] - 36) // 2
+            # 중심 좌표를 썸네일 중앙으로 수정
+            center_x = THUMBNAIL_SIZE[0] / 2
+            center_y = THUMBNAIL_SIZE[1] / 2
+            points = self._get_shape_points((center_x, center_y), size)
+            if points:
+                draw.polygon(points, fill=self.color, outline=self.color)
+
+        return ImageTk.PhotoImage(thumb)
+
+    def _get_shape_points(self, center, size):
+        x, y = center; r = size / 2
+        n_map = {'삼각형': 3, '오각형': 5, '육각형': 6}
+        offset_map = {'삼각형': -90, '오각형': -90, '육각형': -30} # 각도 오프셋
+
+        if self.shape_type == "사각형":
+            return [x-r, y-r, x+r, y-r, x+r, y+r, x-r, y+r]
+
+        n = n_map.get(self.shape_type)
+        offset = math.radians(offset_map.get(self.shape_type, 0))
+
+        if n:
+            # 꼭지점 좌표 계산
+            return [p for i in range(n) for p in (x + r * math.cos(2*math.pi*i/n + offset), y + r * math.sin(2*math.pi*i/n + offset))]
+        return []
+
+================================================================================
+
+(17) tabs\easel\services\__init__.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(18) tabs\easel\services\font_service.py
+--------------------------------------------------------------------------------
+import sys
+import os
+from functools import lru_cache
+
+class FontService:
+    """
+    운영체제에 맞는 폰트 경로를 관리하고 제공하는 클래스
+    """
+    @staticmethod
+    @lru_cache(maxsize=None)
+    def get_font_path(font_name: str) -> str:
+        """
+        주어진 폰트 이름에 대한 전체 경로를 반환합니다.
+        lru_cache를 사용하여 반복적인 파일 시스템 조회를 피합니다.
+        """
+        if not isinstance(font_name, str): # 안전 장치
+             font_name = 'malgun.ttf'
+
+        if not font_name.lower().endswith(('.ttf', '.otf')):
+            font_name += '.ttf'
+
+        font_dirs = []
+        if sys.platform == "win32":
+            font_dirs.append(os.path.join(os.environ.get("SystemRoot", "C:/Windows"), "Fonts"))
+            local_app_data = os.environ.get("LOCALAPPDATA")
+            if local_app_data:
+                 font_dirs.append(os.path.join(local_app_data, "Microsoft", "Windows", "Fonts"))
+
+        elif sys.platform == "darwin": # macOS
+            font_dirs.append("/System/Library/Fonts/Supplemental")
+            font_dirs.append("/Library/Fonts")
+            font_dirs.append(os.path.join(os.path.expanduser("~"), "Library", "Fonts"))
+        else: # Linux
+            font_dirs.append("/usr/share/fonts/truetype")
+            font_dirs.append("/usr/local/share/fonts")
+            font_dirs.append(os.path.join(os.path.expanduser("~"), ".fonts"))
+            font_dirs.append("/usr/share/fonts/liberation") # 특정 폰트 경로 추가
+
+        # 지정된 폰트 찾기
+        for font_dir in font_dirs:
+            path = os.path.join(font_dir, font_name)
+            if os.path.exists(path):
+                return path
+
+        # 폴백 폰트 (맑은 고딕 또는 기본값)
+        default_font = "malgun.ttf" if sys.platform == "win32" else "LiberationSans-Regular.ttf" # Linux 기본값 예시
+        for font_dir in font_dirs:
+             default_path = os.path.join(font_dir, default_font)
+             if os.path.exists(default_path):
+                 print(f"경고: '{font_name}' 폰트를 찾을 수 없어 '{default_font}'로 대체합니다.")
+                 return default_path
+
+        # 최후의 수단 (Tkinter가 내부적으로 찾도록 이름만 반환)
+        print(f"경고: '{font_name}' 폰트를 시스템에서 찾을 수 없습니다. Tkinter 기본 폰트를 사용합니다.")
+        return font_name # Tkinter가 알아서 처리하도록 이름만 반환 (오류 발생 가능성 있음)
+
+================================================================================
+
+(19) tabs\easel\services\image_service.py
+--------------------------------------------------------------------------------
+# 파일 경로: tabs/easel/services/image_service.py (Debug Prints Added)
+
+from tkinter import filedialog, messagebox
+from PIL import Image, ImageDraw, ImageFont
+import math
+import traceback # For detailed error printing
+# --- import 경로 수정 ---
+from ..models.layer import Layer, ImageLayer, TextLayer, ShapeLayer, SAVE_IMG_MAX_SIZE, DISPLAY_IMG_MAX_SIZE
+from .font_service import FontService
+# --- 수정 끝 ---
+
+try:
+    from rembg import remove
+    REMBG_AVAILABLE = True
+    print("DEBUG: rembg library imported successfully.") # Debug print
+except ImportError:
+    REMBG_AVAILABLE = False
+    print("DEBUG: rembg library not found.") # Debug print
+
+
+class ImageService:
+    """최종 이미지 생성, 저장 및 배경 제거 등 이미지 관련 서비스를 제공"""
+
+    @staticmethod
+    def save_canvas_as_image(settings, layers, canvas_objects):
+        # ... (save_canvas_as_image function remains the same) ...
+        # canvas_objects 에는 로고 정보가 없음, settings 에서 logo_info 확인
+        if not any(l.is_visible.get() for l in layers) and 'logo_info' not in settings:
+            messagebox.showwarning("알림", "캔버스에 저장할 항목이 없습니다.")
+            return "저장할 항목 없음."
+
+        save_w = settings['output_width']
+        save_h = settings['output_height']
+        bg_color_hex = settings['background_color']
+
+        try:
+            bg_color = tuple(int(bg_color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)) + (255,)
+        except:
+            bg_color = (255, 255, 255, 255)
+
+        final_image = Image.new("RGBA", (save_w, save_h), bg_color)
+
+        # 렌더링 순서: 레이어 (아래 -> 위) -> 로고 (최상위)
+        visible_layers = [l for l in layers if l.is_visible.get()] # is_visible 체크 유지
+
+        # 1. 레이어 렌더링
+        for layer in visible_layers: # 리스트 순서대로 (아래부터)
+            obj_info = canvas_objects.get(layer.path)
+            if not obj_info: continue
+
+            center_x, center_y = obj_info['rel_x'] * save_w, obj_info['rel_y'] * save_h
+            layer_img = ImageService._render_layer_to_pil(layer, save_w, save_h, settings)
+
+            if layer_img:
+                w, h = layer_img.size
+                paste_pos = (int(center_x - w / 2), int(center_y - h / 2))
+                # Paste 대신 alpha_composite 사용 (투명도 처리 개선)
+                temp_layer_image = Image.new("RGBA", final_image.size, (0, 0, 0, 0))
+                temp_layer_image.paste(layer_img, paste_pos, layer_img) # 마스크로 layer_img 사용
+                final_image = Image.alpha_composite(final_image, temp_layer_image)
+
+        # 2. 로고 렌더링 (레이어 위에)
+        logo_info = settings.get('logo_info')
+        if logo_info and 'pil_img_original' in logo_info:
+            try:
+                logo_pil_original = logo_info['pil_img_original']
+                logo_scale = settings['logo_size']
+
+                logo_target_h = save_h * (settings['logo_zone_height'] / 1500.0) * (logo_scale / 100.0)
+                if logo_pil_original.height > 0:
+                    logo_ratio = logo_target_h / logo_pil_original.height
+                    logo_final_w, logo_final_h = int(logo_pil_original.width * logo_ratio), int(logo_target_h)
+
+                    if logo_final_w > 0 and logo_final_h > 0:
+                        logo_to_paste = logo_pil_original.resize((logo_final_w, logo_final_h), Image.Resampling.LANCZOS)
+                        logo_center_x, logo_center_y = logo_info['rel_x'] * save_w, logo_info['rel_y'] * save_h
+                        logo_paste_pos = (int(logo_center_x - logo_final_w / 2), int(logo_center_y - logo_final_h / 2))
+
+                        temp_logo_image = Image.new("RGBA", final_image.size, (0, 0, 0, 0))
+                        temp_logo_image.paste(logo_to_paste, logo_paste_pos, logo_to_paste) # 마스크로 logo_to_paste 사용
+                        final_image = Image.alpha_composite(final_image, temp_logo_image)
+
+            except Exception as e:
+                 print(f"로고 렌더링 중 오류 발생: {e}")
+
+        # 파일 저장
+        output_format = settings['output_format']
+        fname = (settings['style_code'] or "thumbnail") + ('.png' if output_format == "PNG" else ".jpg")
+        save_path = filedialog.asksaveasfilename(
+            initialdir=settings['save_directory'],
+            initialfile=fname,
+            defaultextension=fname.split('.')[-1]
+        )
+        if not save_path:
+            return "저장 취소."
+        try:
+            if output_format == "JPG":
+                final_image.convert("RGB").save(save_path, "JPEG", quality=95)
+            else:
+                final_image.save(save_path, "PNG")
+            messagebox.showinfo("성공", f"이미지를 저장했습니다.\n{save_path}")
+            return "저장 완료!"
+        except Exception as e:
+            messagebox.showerror("저장 오류", f"파일 저장 중 오류 발생:\n{e}")
+            return "저장 실패."
+
+    @staticmethod
+    def _render_layer_to_pil(layer: Layer, canvas_w, canvas_h, settings) -> Image.Image | None:
+        # ... (_render_layer_to_pil function remains the same) ...
+        scale = layer.scale_var.get()
+
+        if isinstance(layer, TextLayer):
+            font_size = int(scale);
+            if font_size < 1: return None
+            try: font = ImageFont.truetype(FontService.get_font_path(layer.font_family), font_size)
+            except IOError: print(f"Warning: Font '{layer.font_family}' not found."); font = ImageFont.truetype(FontService.get_font_path('malgun.ttf'), font_size)
+            bbox = font.getbbox(layer.text); text_w, text_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+            if text_w <= 0 or text_h <= 0: return None
+            txt_img = Image.new('RGBA', (text_w, text_h), (0, 0, 0, 0)); d = ImageDraw.Draw(txt_img)
+            d.text((-bbox[0], -bbox[1]), layer.text, font=font, fill=layer.color)
+            return txt_img.rotate(layer.angle, expand=True, resample=Image.Resampling.BICUBIC) if layer.angle != 0 else txt_img
+
+        elif isinstance(layer, ShapeLayer):
+            shape_size = scale;
+            if shape_size < 1: return None
+            if layer.shape_type != '자유곡선':
+                points = layer._get_shape_points((0, 0), shape_size)
+                if not points: return None
+                if layer.angle != 0: points = ImageService._rotate_points(points, (0, 0), -layer.angle)
+                xs, ys = points[0::2], points[1::2]; min_x, max_x = min(xs), max(xs); min_y, max_y = min(ys), max(ys)
+                width, height = int(max_x - min_x) + 1, int(max_y - min_y) + 1
+                if width <=0 or height <=0: return None
+                shape_img = Image.new('RGBA', (width, height), (0,0,0,0)); shape_draw = ImageDraw.Draw(shape_img)
+                shifted_points = [(x - min_x, y - min_y) for x, y in zip(xs, ys)]; shape_draw.polygon(shifted_points, fill=layer.color)
+                return shape_img
+            else: # 자유곡선
+                if not layer.pil_image: return None
+                img = layer.pil_image; scale_factor = scale / 100.0; final_w, final_h = int(img.width * scale_factor), int(img.height * scale_factor)
+                if final_w < 1 or final_h < 1: return None
+                img_to_paste = img.resize((final_w, final_h), Image.Resampling.LANCZOS)
+                return img_to_paste.rotate(layer.angle, expand=True, resample=Image.Resampling.BICUBIC) if layer.angle != 0 else img_to_paste
+
+        elif isinstance(layer, ImageLayer):
+            try:
+                if not hasattr(layer, 'pil_img_save') or layer.pil_img_save is None:
+                    layer.pil_img_save = layer.pil_img_original.copy(); layer.pil_img_save.thumbnail(SAVE_IMG_MAX_SIZE, Image.Resampling.LANCZOS)
+                    print(f"Warning: Regenerated pil_img_save for {layer.path}")
+                pil_to_process = layer.pil_img_save.crop(layer.crop_box) if layer.crop_box else layer.pil_img_save
+            except Exception as e: print(f"Error accessing/cropping pil_img_save for {layer.path}: {e}"); return None
+            scale_factor = scale / 100.0; logo_zone_h = canvas_h * (settings['logo_zone_height'] / 1500.0); target_h = (canvas_h - logo_zone_h) * scale_factor
+            if pil_to_process.height > 0:
+                ratio = target_h / pil_to_process.height; final_w, final_h = int(pil_to_process.width * ratio), int(target_h)
+                if final_w > 0 and final_h > 0:
+                    try:
+                        img_to_paste = pil_to_process.resize((final_w, final_h), Image.Resampling.LANCZOS)
+                        if layer.angle != 0: img_to_paste = img_to_paste.rotate(layer.angle, expand=True, resample=Image.Resampling.BICUBIC)
+                        return img_to_paste
+                    except Exception as e: print(f"Error resizing/rotating image {layer.path}: {e}"); return None
+            else: print(f"Warning: Image {layer.path} has zero height."); return None
+        return None
+
+    # [ ★★★★★ 여기가 수정된 함수입니다 (Debug Prints Added) ★★★★★ ]
+    @staticmethod
+    def remove_background(layer: ImageLayer) -> bool:
+        print(f"\n--- DEBUG: remove_background START for {layer.path} ---") # Debug print
+        if not REMBG_AVAILABLE:
+            print("DEBUG: rembg library is not available.") # Debug print
+            messagebox.showerror("오류", "rembg 라이브러리를 사용할 수 없습니다.")
+            return False
+        if not isinstance(layer, ImageLayer):
+            print(f"DEBUG: Layer is not ImageLayer (type: {type(layer)})") # Debug print
+            messagebox.showerror("오류", "이미지 레이어가 아닙니다.")
+            return False
+
+        try:
+            # [ ★★★★★ 수정 1: pil_img_save (저장용 이미지) 기반으로 배경 제거 ★★★★★ ]
+            if not hasattr(layer, 'pil_img_save') or layer.pil_img_save is None:
+                 print(f"DEBUG: pil_img_save not found for layer {layer.path}") # Debug print
+                 messagebox.showerror("오류", f"이미지 레이어 '{layer.path}'의 처리용 이미지 데이터를 찾을 수 없습니다.")
+                 print(f"--- DEBUG: remove_background END for {layer.path} (Failed: No pil_img_save) ---") # Debug print
+                 return False
+
+            print(f"DEBUG: Input image (pil_img_save) size: {layer.pil_img_save.size}, mode: {layer.pil_img_save.mode}") # Debug print
+
+            # Ensure input is RGBA for rembg
+            input_image = layer.pil_img_save
+            if input_image.mode != 'RGBA':
+                print(f"DEBUG: Converting input image to RGBA from {input_image.mode}") # Debug print
+                input_image = input_image.convert("RGBA")
+
+            # Use pil_img_save as input
+            print("DEBUG: Calling rembg.remove()...") # Debug print
+            removed_pil = remove(input_image)
+            print(f"DEBUG: rembg.remove() finished. Output size: {removed_pil.size}, mode: {removed_pil.mode}") # Debug print
+
+            tight_bbox = removed_pil.getbbox()
+            print(f"DEBUG: BBox after rembg: {tight_bbox}") # Debug print
+
+            final_pil = removed_pil.crop(tight_bbox) if tight_bbox else removed_pil
+            if final_pil.width == 0 or final_pil.height == 0:
+                print(f"Warning: Background removal resulted in empty image for {layer.path}. Using uncropped.") # Debug print
+                final_pil = removed_pil # Fallback to uncropped if bbox is invalid
+            print(f"DEBUG: Final PIL image size after crop: {final_pil.size}, mode: {final_pil.mode}") # Debug print
+
+            # [ ★★★★★ 수정 2: 배경 제거된 이미지로 save/display 이미지 업데이트 ★★★★★ ]
+            layer.pil_img_save = final_pil.copy()
+            layer.pil_img_save.thumbnail(SAVE_IMG_MAX_SIZE, Image.Resampling.LANCZOS)
+            print(f"DEBUG: Updated pil_img_save size: {layer.pil_img_save.size}") # Debug print
+
+            layer.pil_img_display = layer.pil_img_save.copy()
+            layer.pil_img_display.thumbnail(DISPLAY_IMG_MAX_SIZE, Image.Resampling.LANCZOS)
+            print(f"DEBUG: Updated pil_img_display size: {layer.pil_img_display.size}") # Debug print
+
+            layer.crop_box = None
+            layer.angle = 0.0
+            layer.thumbnail = layer.create_thumbnail()
+            layer._thumbnail_ref = layer.thumbnail
+            print(f"DEBUG: Reset crop_box, angle, and updated thumbnail.") # Debug print
+
+            print(f"--- DEBUG: remove_background END for {layer.path} (Success) ---") # Debug print
+            return True
+
+        except Exception as e:
+            print(f"ERROR during background removal for {layer.path}: {e}") # Debug print
+            traceback.print_exc() # Print detailed traceback
+            messagebox.showerror("배경 제거 오류", f"배경 제거 중 오류가 발생했습니다: {e}")
+            print(f"--- DEBUG: remove_background END for {layer.path} (Failed: Exception) ---") # Debug print
+            return False
+    # [ ★★★★★ 수정된 함수 끝 ★★★★★ ]
+
+    @staticmethod
+    def _rotate_points(points, center, angle_degrees):
+        angle_rad = math.radians(angle_degrees); cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad); cx, cy = center; new_points = []
+        for i in range(0, len(points), 2):
+            px, py = points[i], points[i+1]; px_rel, py_rel = px - cx, py - cy
+            new_px = px_rel * cos_a - py_rel * sin_a + cx; new_py = px_rel * sin_a + py_rel * cos_a + cy; new_points.extend([new_px, new_py])
+        return new_points
+
+================================================================================
+
+(20) tabs\easel\services\project_service.py
+--------------------------------------------------------------------------------
+import pickle
+from tkinter import filedialog, messagebox
+import os
+# --- import 경로 수정 (상대 경로 사용) ---
+from ..models.layer import Layer, ImageLayer, TextLayer, ShapeLayer
+# --- 수정 끝 ---
+
+class ProjectService:
+    """프로젝트 저장 및 불러오기 기능을 담당하는 서비스 클래스"""
+
+    @staticmethod
+    def save_project(settings: dict, layers: list[Layer], canvas_objects: dict):
+        path = filedialog.asksaveasfilename(
+            title="프로젝트 저장",
+            defaultextension=".wsb",
+            filetypes=[("CiTRUS Project", "*.wsb")]
+        )
+        if not path:
+            return
+
+        try:
+            project_data = {
+                'settings': settings,
+                'layers': [ProjectService._serialize_layer(l) for l in layers],
+                'canvas_positions': ProjectService._serialize_canvas_positions(canvas_objects)
+            }
+            with open(path, 'wb') as f:
+                pickle.dump(project_data, f)
+
+            messagebox.showinfo("성공", "프로젝트를 성공적으로 저장했습니다.")
+            return f"프로젝트 저장 완료: {os.path.basename(path)}"
+        except Exception as e:
+            messagebox.showerror("저장 오류", f"프로젝트 저장 중 오류가 발생했습니다:\n{e}")
+            return "프로젝트 저장 실패."
+
+    @staticmethod
+    def load_project():
+        path = filedialog.askopenfilename(
+            title="프로젝트 불러오기",
+            filetypes=[("CiTRUS Project", "*.wsb")]
+        )
+        if not path:
+            return None
+
+        try:
+            with open(path, 'rb') as f:
+                project_data = pickle.load(f)
+
+            if 'global_settings' in project_data and 'settings' not in project_data:
+                project_data['settings'] = project_data.pop('global_settings')
+
+            deserialized_layers = []
+            for layer_data in project_data.get('layers', []):
+                layer = ProjectService._deserialize_layer(layer_data)
+                if layer:
+                    deserialized_layers.append(layer)
+            project_data['layers'] = deserialized_layers
+            project_data['path'] = path
+
+            messagebox.showinfo("성공", "프로젝트를 성공적으로 불러왔습니다.")
+            return project_data
+
+        except Exception as e:
+            messagebox.showerror("불러오기 오류", f"프로젝트 파일을 불러오는 중 오류가 발생했습니다:\n{e}")
+            return None
+
+    @staticmethod
+    def _serialize_layer(layer: Layer) -> dict:
+        data = {
+            '__class__': layer.__class__.__name__,
+            'type': layer.type,
+            'path': layer.path,
+            'is_visible': layer.is_visible.get(),
+            'angle': layer.angle,
+            'scale': layer.scale_var.get(),
+        }
+        if isinstance(layer, ImageLayer):
+            data.update({'crop_box': layer.crop_box})
+        elif isinstance(layer, TextLayer):
+            data.update({'text': layer.text, 'font_family': layer.font_family, 'color': layer.color})
+        elif isinstance(layer, ShapeLayer):
+            data.update({'shape_type': layer.shape_type, 'color': layer.color, 'pil_image': layer.pil_image})
+        return data
+
+    @staticmethod
+    def _deserialize_layer(data: dict) -> Layer | None:
+        class_name = None
+        if '__class__' in data:
+            class_name = data.pop('__class__')
+        elif 'type' in data:
+            type_name = data.get('type')
+            if type_name == 'image': class_name = 'ImageLayer'
+            elif type_name == 'text': class_name = 'TextLayer'
+            elif type_name == 'shape': class_name = 'ShapeLayer'
+            else: print(f"알 수 없는 구버전 레이어 타입: {type_name}"); return None
+        else: print(f"필수 키('__class__' 또는 'type')가 없는 레이어 데이터입니다."); return None
+
+        layer = None
+        try:
+            if class_name == 'ImageLayer':
+                img_path = data.get('path')
+                if not img_path: print(f"ImageLayer에 'path' 키가 없습니다."); return None
+                normalized_path = os.path.normpath(img_path)
+                if not os.path.exists(normalized_path):
+                    messagebox.showwarning("파일 누락", f"이미지 파일을 찾을 수 없습니다:\n{normalized_path}")
+                    return None
+                layer = ImageLayer(normalized_path)
+                layer.crop_box = data.get('crop_box')
+
+            elif class_name == 'TextLayer':
+                font_size = data.get('scale', data.get('scale_var_value', 30))
+                layer = TextLayer(data['text'], data['font_family'], font_size, data['color'])
+
+            elif class_name == 'ShapeLayer':
+                pil_image = data.get('pil_image')
+                layer = ShapeLayer(data['shape_type'], data['color'], pil_image)
+
+        except Exception as e:
+            print(f"레이어 객체 생성 실패({data.get('path', 'N/A')}): {e}. 건너뜁니다."); return None
+
+        if layer:
+            is_visible = data.get('is_visible', data.get('var_value', False))
+            layer.is_visible.set(is_visible)
+            layer.angle = data.get('angle', 0.0)
+            default_scale = 30.0 if class_name == 'ImageLayer' else 100.0
+            scale = data.get('scale', data.get('scale_var_value', default_scale))
+            layer.scale_var.set(scale)
+
+        return layer
+
+    @staticmethod
+    def _serialize_canvas_positions(canvas_objects: dict) -> dict:
+        positions = {}
+        for path, obj_info in canvas_objects.items():
+            if obj_info and 'rel_x' in obj_info and 'rel_y' in obj_info:
+                 positions[path] = {'rel_x': obj_info['rel_x'], 'rel_y': obj_info['rel_y']}
+            else:
+                 print(f"경고: 유효하지 않은 캔버스 객체 데이터 건너뜀 (path: {path})")
+        return positions
+
+================================================================================
+
+(21) tabs\lab\__init__.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(22) tabs\lab\lab_controller.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(23) tabs\lab\lab_tab_view.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(24) tabs\stitch\__init__.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(25) tabs\stitch\stitch_controller.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(26) tabs\stitch\stitch_tab_view.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(27) ui\__init__.py
+--------------------------------------------------------------------------------
+
+================================================================================
+
+(28) ui\dialogs.py
+--------------------------------------------------------------------------------
+# 파일 경로: ui/dialogs.py (No ttkbootstrap - Final version)
+
+import tkinter as tk
+import tkinter.ttk as ttk # [MODIFIED] 표준 ttk 사용
+from tkinter import colorchooser, font, messagebox
+# [MODIFIED] ttkbootstrap import 제거
+# import ttkbootstrap as ttk
+# from PIL import Image, ImageDraw # ShapeDialog에서 사용하므로 유지
+
+# [ ★★★★★ NEW: 테마 임포트 ★★★★★ ]
+from ui.theme import Colors
+
+
+class TextPropertiesDialog(tk.Toplevel): # [MODIFIED] tk.Toplevel 상속
+    def __init__(self, parent, initial_values=None):
+        super().__init__(parent); self.transient(parent); self.title("텍스트 속성"); self.geometry("350x250"); self.result = None
+        self.available_fonts = sorted([f for f in font.families() if not f.startswith('@')])
+        self.text_var = tk.StringVar(); self.font_var = tk.StringVar(); self.size_var = tk.IntVar(); self.color_var = tk.StringVar()
+        if initial_values:
+            self.text_var.set(initial_values.get('text', '')); self.font_var.set(initial_values.get('font_family', "맑은 고딕"))
+            self.size_var.set(initial_values.get('font_size', 30)); self.color_var.set(initial_values.get('color', Colors.BLACK)) # Use Colors.BLACK
+        else:
+            self.text_var.set("텍스트를 입력하세요"); self.font_var.set("맑은 고딕" if "맑은 고딕" in self.available_fonts else self.available_fonts[0])
+            self.size_var.set(30); self.color_var.set(Colors.BLACK) # Use Colors.BLACK
+        main_frame = tk.Frame(self, bg=Colors.WHITE, padx=10, pady=10); main_frame.pack(fill="both", expand=True); main_frame.columnconfigure(1, weight=1) # Use Colors.WHITE
+        tk.Label(main_frame, text="내용:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).grid(row=0, column=0, sticky="w", pady=2) # Use Colors
+        tk.Entry(main_frame, textvariable=self.text_var).grid(row=0, column=1, columnspan=2, sticky="ew", pady=2)
+        tk.Label(main_frame, text="글꼴:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).grid(row=1, column=0, sticky="w", pady=2) # Use Colors
+        ttk.Combobox(main_frame, textvariable=self.font_var, values=self.available_fonts, state="readonly").grid(row=1, column=1, columnspan=2, sticky="ew", pady=2)
+        tk.Label(main_frame, text="크기:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).grid(row=2, column=0, sticky="w", pady=2) # Use Colors
+        tk.Spinbox(main_frame, from_=8, to=200, textvariable=self.size_var, width=10).grid(row=2, column=1, columnspan=2, sticky="ew", pady=2)
+        tk.Label(main_frame, text="색상:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).grid(row=3, column=0, sticky="w", pady=2) # Use Colors
+        self.color_preview = tk.Canvas(main_frame, width=24, height=24, bg=self.color_var.get(), highlightthickness=1, highlightbackground=Colors.GREY, bd=0) # Use Colors.GREY
+        self.color_preview.grid(row=3, column=1, sticky="w", pady=2)
+        tk.Button(main_frame, text="색상 선택", command=self._choose_color, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).grid(row=3, column=2, sticky="ew", padx=(5,0), pady=2) # Use Colors
+        btn_frame = tk.Frame(main_frame, bg=Colors.WHITE); btn_frame.grid(row=4, column=0, columnspan=3, pady=(20, 0)) # Use Colors.WHITE
+        tk.Button(btn_frame, text="확인", command=self._on_ok, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARKER_RED).pack(side="left", padx=5) # Use Colors
+        tk.Button(btn_frame, text="취소", command=self.destroy, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(side="left", padx=5) # Use Colors
+        self.grab_set(); self.protocol("WM_DELETE_WINDOW", self.destroy); self.wait_window(self)
+
+    def _choose_color(self): code = colorchooser.askcolor(title="글자 색상 선택", initialcolor=self.color_var.get()); self.color_var.set(code[1]); self.color_preview.config(bg=code[1]) if code[1] else None
+    def _on_ok(self): self.result = {"text": self.text_var.get(), "font_family": self.font_var.get(), "font_size": self.size_var.get(), "color": self.color_var.get()}; self.destroy()
+
+class ShapePropertiesDialog(tk.Toplevel): # [MODIFIED] tk.Toplevel 상속
+    def __init__(self, parent, initial_values=None):
+        super().__init__(parent); self.transient(parent); self.title("도형 속성"); self.result = None
+        self.shape_types = ["사각형", "삼각형", "오각형", "육각형", "자유곡선"]; self.shape_var = tk.StringVar(value=self.shape_types[0]); self.color_var = tk.StringVar(value=Colors.MAIN_RED) # Use Colors.MAIN_RED
+        self.drawing_canvas = None; self.pil_image = None; self.pil_draw = None; self.last_x, self.last_y = None, None
+        if initial_values: self.shape_var.set(initial_values.get('shape_type', self.shape_types[0])); self.color_var.set(initial_values.get('color', Colors.MAIN_RED)) # Use Colors.MAIN_RED
+        main_frame = tk.Frame(self, bg=Colors.WHITE, padx=10, pady=10); main_frame.pack(fill="both", expand=True); main_frame.columnconfigure(1, weight=1) # Use Colors.WHITE
+        tk.Label(main_frame, text="종류:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).grid(row=0, column=0, sticky="w", pady=2) # Use Colors
+        combo = ttk.Combobox(main_frame, textvariable=self.shape_var, values=self.shape_types, state="readonly"); combo.grid(row=0, column=1, columnspan=2, sticky="ew", pady=2); combo.bind("<<ComboboxSelected>>", self._on_shape_select)
+        tk.Label(main_frame, text="색상:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).grid(row=1, column=0, sticky="w", pady=2) # Use Colors
+        self.color_preview = tk.Canvas(main_frame, width=24, height=24, bg=self.color_var.get(), highlightthickness=1, highlightbackground=Colors.GREY, bd=0) # Use Colors.GREY
+        self.color_preview.grid(row=1, column=1, sticky="w", pady=2)
+        tk.Button(main_frame, text="색상 선택", command=self._choose_color, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).grid(row=1, column=2, sticky="ew", padx=(5,0), pady=2) # Use Colors
+        self.drawing_frame = tk.Frame(main_frame, bg=Colors.GREY); self.drawing_frame.grid(row=2, column=0, columnspan=3, sticky="nsew", pady=(10,0)); main_frame.rowconfigure(2, weight=1) # Use Colors.GREY
+        btn_frame = tk.Frame(main_frame, bg=Colors.WHITE); btn_frame.grid(row=3, column=0, columnspan=3, pady=(10, 0)) # Use Colors.WHITE
+        tk.Button(btn_frame, text="확인", command=self._on_ok, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARKER_RED).pack(side="left", padx=5) # Use Colors
+        tk.Button(btn_frame, text="취소", command=self.destroy, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).pack(side="left", padx=5) # Use Colors
+        self._on_shape_select(); self.grab_set(); self.protocol("WM_DELETE_WINDOW", self.destroy); self.wait_window(self)
+
+    def _on_shape_select(self, event=None):
+        if self.drawing_canvas: self.drawing_canvas.destroy()
+        if self.shape_var.get() == "자유곡선":
+            self.geometry("400x450")
+            self.drawing_canvas = tk.Canvas(self.drawing_frame, bg=Colors.WHITE, highlightthickness=0); self.drawing_canvas.pack(fill="both", expand=True, padx=1, pady=1) # Use Colors.WHITE
+            self.drawing_canvas.bind("<Button-1>", self._start_drawing); self.drawing_canvas.bind("<B1-Motion>", self._draw); self.drawing_canvas.bind("<ButtonRelease-1>", self._end_drawing)
+            from PIL import Image, ImageDraw # 필요 시점에 import
+            self.pil_image = Image.new("RGBA", (380, 280), (0, 0, 0, 0)); self.pil_draw = ImageDraw.Draw(self.pil_image)
+        else: self.geometry("")
+    def _start_drawing(self, event): self.last_x, self.last_y = event.x, event.y
+    def _draw(self, event):
+        if self.last_x and self.last_y and self.pil_draw:
+            self.drawing_canvas.create_line(self.last_x, self.last_y, event.x, event.y, fill=self.color_var.get(), width=3, capstyle=tk.ROUND, smooth=tk.TRUE)
+            self.pil_draw.line([self.last_x, self.last_y, event.x, event.y], fill=self.color_var.get(), width=3, joint="curve"); self.last_x, self.last_y = event.x, event.y
+    def _end_drawing(self, event): self.last_x, self.last_y = None, None
+    def _choose_color(self): code = colorchooser.askcolor(title="도형 색상 선택", initialcolor=self.color_var.get()); self.color_var.set(code[1]); self.color_preview.config(bg=code[1]) if code[1] else None
+    def _on_ok(self):
+        self.result = {"shape_type": self.shape_var.get(), "color": self.color_var.get()}
+        if self.shape_var.get() == "자유곡선" and self.pil_image: bbox = self.pil_image.getbbox(); self.result["pil_image"] = self.pil_image.crop(bbox) if bbox else None
+        self.destroy()
+
+class SignupDialog(tk.Toplevel): # [MODIFIED] tk.Toplevel 상속
+    def __init__(self, parent, x=None, y=None):
+        super().__init__(parent); self.transient(parent); self.title("회원가입"); self.result = None
+        self.name_var = tk.StringVar(); self.id_var = tk.StringVar(); self.email_var = tk.StringVar(); self.pass_var = tk.StringVar()
+        main_frame = tk.Frame(self, bg=Colors.WHITE, padx=15, pady=15); main_frame.pack(fill="both", expand=True); main_frame.columnconfigure(1, weight=1) # Use Colors.WHITE
+        tk.Label(main_frame, text="이름:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).grid(row=0, column=0, sticky="w", pady=5) # Use Colors
+        self.name_entry = tk.Entry(main_frame, textvariable=self.name_var); self.name_entry.grid(row=0, column=1, sticky="ew", pady=5)
+        tk.Label(main_frame, text="아이디:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).grid(row=1, column=0, sticky="w", pady=5) # Use Colors
+        self.id_entry = tk.Entry(main_frame, textvariable=self.id_var); self.id_entry.grid(row=1, column=1, sticky="ew", pady=5)
+        tk.Label(main_frame, text="이메일:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).grid(row=2, column=0, sticky="w", pady=5) # Use Colors
+        tk.Entry(main_frame, textvariable=self.email_var).grid(row=2, column=1, sticky="ew", pady=5)
+        tk.Label(main_frame, text="비밀번호:", bg=Colors.WHITE, fg=Colors.DARK_TEAL).grid(row=3, column=0, sticky="w", pady=5) # Use Colors
+        tk.Entry(main_frame, textvariable=self.pass_var, show="*").grid(row=3, column=1, sticky="ew", pady=5)
+        btn_frame = tk.Frame(main_frame, bg=Colors.WHITE); btn_frame.grid(row=4, column=0, columnspan=2, pady=(20, 0)); btn_frame.columnconfigure((0, 1), weight=1) # Use Colors.WHITE
+        tk.Button(btn_frame, text="회원가입", command=self._on_ok, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARKER_RED).grid(row=0, column=0, sticky="e", padx=5) # Use Colors
+        tk.Button(btn_frame, text="취소", command=self.destroy, bg=Colors.GREY, fg=Colors.WHITE, relief=tk.FLAT, activebackground=Colors.DARK_GREY).grid(row=0, column=1, sticky="w", padx=5) # Use Colors
+        self.update_idletasks(); width = self.winfo_reqwidth(); height = self.winfo_reqheight()
+        if x is not None and y is not None: self.geometry(f'{width}x{height}+{x}+{y}')
+        else: screen_w, screen_h = self.winfo_screenwidth(), self.winfo_screenheight(); center_x, center_y = (screen_w - width) // 2, (screen_h - height) // 2; self.geometry(f'{width}x{height}+{center_x}+{center_y}')
+        self.grab_set(); self.protocol("WM_DELETE_WINDOW", self.destroy); self.after(50, self.focus_force); self.after(100, self.name_entry.focus_set); self.wait_window(self)
+
+    def _on_ok(self):
+        name = self.name_var.get(); user_id = self.id_var.get(); email = self.email_var.get(); password = self.pass_var.get()
+        if not (name and user_id and email and password): messagebox.showwarning("입력 오류", "모든 항목 입력.", parent=self); return
+        self.result = {"name": name, "username": user_id, "email": email, "password": password}; self.destroy()
+
+================================================================================
+
+(29) ui\login_window.py
+--------------------------------------------------------------------------------
+# File path: ui/login_window.py (No ttkbootstrap - Final version - Indentation Fix 3)
+
+import tkinter as tk
+import tkinter.scrolledtext as tkst
+from tkinter import messagebox
+import importlib.util
+import traceback # For debugging
+import os # Added for image path
+
+try: from PIL import Image, ImageTk; PIL_AVAILABLE = True
+except ImportError: PIL_AVAILABLE = False; print("WARNING: Pillow not found.")
+
+# [ ★★★★★ NEW: 테마 임포트 ★★★★★ ]
+from ui.theme import Colors
+
+from ui.dialogs import SignupDialog
+from services.auth_service import create_user, check_user_login
+
+class LoginWindow(tk.Toplevel):
+    BG_IMAGE_FILENAME = "login_background.png"; BG_WIDTH = 900; BG_HEIGHT = 500
+
+    def __init__(self, parent, check_func, install_func, launch_func):
+        print("[DEBUG] LoginWindow __init__ started.")
+        try: super().__init__(parent)
+        except Exception as e: print(f"[ERROR] super().__init__ failed: {e}"); traceback.print_exc(); parent.destroy(); return
+        self.parent = parent; self.check_dependencies = check_func; self.install_package = install_func; self.launch_main_app = launch_func
+        self.dnd_available = False; self._bg_image_ref = None; self._image_refs = {}
+        self.title("CiTRUS Login"); self.resizable(False, False); self.overrideredirect(True)
+        self.magic_color = '#abcdef'; self.config(bg=self.magic_color, bd=0, highlightthickness=0)
+        try: self.update_idletasks(); self.wm_attributes("-transparentcolor", self.magic_color); print(f"[DEBUG] Applied transparentcolor: {self.magic_color}")
+        except tk.TclError as e: print(f"WARNING: -transparentcolor failed: {e}")
+        self.bg_width, self.bg_height = self._get_image_size(self.BG_IMAGE_FILENAME) or (900, 500)
+        try:
+            print("[DEBUG] Creating Canvas container...")
+            self.canvas = tk.Canvas(self, width=self.bg_width, height=self.bg_height, bg=self.magic_color, bd=0, highlightthickness=0)
+            self.canvas.pack(fill="both", expand=True); self._load_background_image(self.BG_IMAGE_FILENAME)
+            self.form_frame = tk.Frame(self.canvas, width=450, height=300)
+            self.form_frame.config(bg=Colors.WHITE, bd=0, relief='flat') # Use Colors.WHITE
+            self.form_frame.grid_propagate(False); self.form_frame.columnconfigure(0, weight=1); self.form_frame.rowconfigure(1, weight=1)
+            self._create_input_fields(self.form_frame) # row=0
+            self.console_output = tkst.ScrolledText(self.form_frame, height=5, wrap=tk.WORD, state="disabled", bg=Colors.WHITE, fg=Colors.GREY) # Use Colors
+            self.console_output.grid(row=1, column=0, columnspan=2, padx=10, pady=(10, 5), sticky="nsew")
+            install_btn_frame = tk.Frame(self.form_frame, bg=self.form_frame.cget('bg')); install_btn_frame.grid(row=2, column=0, columnspan=2, pady=(5, 5))
+            self.install_button = tk.Button(install_btn_frame, text="Install Add-ons", command=self._install_optional_packages, width=15, relief="flat", bg=Colors.GREY, fg=Colors.WHITE, activebackground=Colors.DARK_GREY) # Use Colors
+            self.install_button.pack()
+            self._create_action_buttons(self.form_frame) # row=3
+            self.form_frame.update_idletasks()
+            form_w, form_h = self.form_frame.winfo_reqwidth(), self.form_frame.winfo_reqheight(); print(f"[DEBUG] Form requested size: {form_w}x{form_h}")
+            form_anchor_x = int(self.bg_width * 0.47); form_anchor_y = int(self.bg_height * 0.66 - form_h / 2)
+            self.canvas.create_window(form_anchor_x, form_anchor_y, window=self.form_frame, anchor="nw"); print(f"[DEBUG] Form placed at ({form_anchor_x}, {form_anchor_y}) anchor=nw")
+            self._create_custom_title_bar()
+            print("[DEBUG] UI elements OK.")
+            self.bind("<Return>", lambda event: self.attempt_login() if self.login_button['state'] == 'normal' else None); self.bind_all("<Alt-F4>", lambda event: self.on_close()); print("[DEBUG] Events bound.")
+            self.withdraw(); self.update_idletasks(); self.center_window(); self.deiconify(); print("[DEBUG] Window positioned/deiconified.")
+            self.username_entry.focus_set(); print("[DEBUG] Focus set.")
+            self.after(100, self.run_dependency_checks_safe); print("[DEBUG] LoginWindow __init__ finished.")
+        except Exception as init_error:
+            print(f"[ERROR] UI Init: {init_error}"); traceback.print_exc()
+            try: messagebox.showerror("UI Error", f"Error during UI creation:\n{init_error}", parent=parent)
+            except: pass
+            try: parent.destroy()
+            except: pass
+
+    # --- UI creation helper functions ---
+    def _get_image_size(self, filename):
+        if not PIL_AVAILABLE: return None, None
+        try:
+            base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            path = os.path.join(base, filename)
+            if os.path.exists(path):
+                with Image.open(path) as img:
+                    print(f"DEBUG: Found image {filename}, size={img.size}")
+                    return img.size
+            else:
+                print(f"WARN: Image file not found at {path}")
+                return None, None
+        except Exception as e:
+            print(f"ERROR getting image size: {e}")
+            return None, None
+
+    def _load_background_image(self, filename):
+        if PIL_AVAILABLE:
+            try: # [ ★★★★★ Corrected Try Block Start ★★★★★ ]
+                base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                path = os.path.join(base, filename)
+                print(f"[DEBUG] Loading BG: {path}")
+                if os.path.exists(path):
+                    img = Image.open(path)
+                    if img.size != (self.bg_width, self.bg_height):
+                        print(f"WARN: BG size mismatch. Resizing.")
+                        img = img.resize((self.bg_width, self.bg_height), Image.Resampling.LANCZOS)
+                    if img.mode != 'RGBA':
+                        print("WARNING: Converting BG to RGBA.")
+                        img = img.convert('RGBA')
+                    self._bg_image_ref = ImageTk.PhotoImage(img)
+                    self.canvas.create_image(0, 0, image=self._bg_image_ref, anchor="nw")
+                    print("[DEBUG] BG placed.")
+                else:
+                    print(f"WARN: BG not found: {path}")
+                    self.canvas.create_text(self.bg_width/2, self.bg_height/2, text="BG not found", anchor="center")
+            # [ ★★★★★ Corrected Except Block Indentation ★★★★★ ]
+            except Exception as e:
+                print(f"ERROR loading BG: {e}")
+                traceback.print_exc()
+                self.canvas.create_text(self.bg_width/2, self.bg_height/2, text="BG Load Error", anchor="center")
+        else:
+            self.canvas.create_text(self.bg_width/2, self.bg_height/2, text="Pillow required", anchor="center")
+    # [ ★★★★★ Corrected Try/Except End ★★★★★ ]
+
+
+    def _create_input_fields(self, parent):
+        frame = tk.Frame(parent, bg=parent.cget('bg')); frame.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 5)); frame.columnconfigure(1, weight=1)
+        tk.Label(frame, text="Username :", width=10, bg=parent.cget('bg'), fg=Colors.DARK_TEAL).grid(row=0, column=0, padx=5, pady=5, sticky="w") # Use Colors.DARK_TEAL
+        self.username_entry = tk.Entry(frame); self.username_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        tk.Label(frame, text="Password :", width=10, bg=parent.cget('bg'), fg=Colors.DARK_TEAL).grid(row=1, column=0, padx=5, pady=5, sticky="w") # Use Colors.DARK_TEAL
+        self.password_entry = tk.Entry(frame, show="*"); self.password_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+
+    def _create_action_buttons(self, parent):
+        frame = tk.Frame(parent, bg=parent.cget('bg')); frame.grid(row=3, column=0, columnspan=2, pady=(10, 0), sticky="ew"); frame.columnconfigure((0, 1), weight=1)
+        self.login_button = tk.Button(frame, text="Login", command=self.attempt_login, state="disabled", width=12, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief="flat", activebackground=Colors.DARKER_RED, activeforeground=Colors.WHITE) # Use Colors
+        self.login_button.grid(row=0, column=0, sticky="e", padx=5)
+        self.signup_button = tk.Button(frame, text="Sign Up", command=self._open_signup_window, width=12, bg=Colors.WHITE, fg=Colors.MAIN_RED, relief="solid", bd=1, highlightthickness=0, activebackground="#f0f0f0") # Use Colors
+        self.signup_button.grid(row=0, column=1, sticky="w", padx=5)
+
+    def _create_custom_title_bar(self):
+        button_bar = tk.Frame(self.canvas, bg=self.magic_color)
+        close_btn = tk.Button(button_bar, text="✕", width=3, command=self.on_close, bg=Colors.MAIN_RED, fg=Colors.WHITE, relief="flat", activebackground=Colors.DARKER_RED) # Use Colors
+        close_btn.pack(side="right", padx=(2, 5), pady=5)
+        min_btn = tk.Button(button_bar, text="＿", width=3, command=self._minimize_window, bg=Colors.GREY, fg=Colors.WHITE, relief="flat", activebackground=Colors.DARK_GREY) # Use Colors
+        min_btn.pack(side="right", pady=5)
+        self.canvas.create_window(self.bg_width, 0, window=button_bar, anchor="ne")
+    # --- End of UI creation helper functions ---
+
+    # --- Functional methods (유지) ---
+    def _minimize_window(self): self.iconify()
+    def run_dependency_checks_safe(self):
+        print("[DEBUG] Starting dep check...")
+        try: self.run_dependency_checks()
+        except Exception as e: print(f"[ERROR] Dep check: {e}"); traceback.print_exc(); self.log_to_console(f"Error checking libraries: {e}"); messagebox.showerror("Error", f"Library check error:\n{e}", parent=self)
+        print("[DEBUG] Dep check finished.")
+    def log_to_console(self, msg):
+        try: print(f"[LOG] {msg}"); self.console_output.config(state="normal"); self.console_output.insert(tk.END, msg+"\n"); self.console_output.see(tk.END); self.console_output.config(state="disabled"); self.update_idletasks()
+        except Exception as e: print(f"[ERROR] log: {e}")
+    def center_window(self):
+        try: self.update_idletasks(); w, h = self.bg_width, self.bg_height; sw, sh = self.winfo_screenwidth(), self.winfo_screenheight(); x, y = (sw-w)//2, (sh-h)//2; print(f"[DEBUG] center: {w}x{h}+{x}+{y}"); self.geometry(f"{w}x{h}+{x}+{y}")
+        except Exception as e: print(f"[ERROR] center: {e}"); traceback.print_exc()
+    def _install_optional_packages(self):
+        print("[DEBUG] Install optional..."); self.log_to_console("Checking add-ons..."); self.install_button.config(state="disabled", text="Checking..."); self.update_idletasks()
+        missing = [pkg for pkg in ["tkinterdnd2", "rembg"] if importlib.util.find_spec(pkg) is None]
+        if not missing: self.log_to_console("All add-ons installed."); messagebox.showinfo("Info", "All add-ons installed.", parent=self)
+        else:
+            self.log_to_console(f"Installing: {', '.join(missing)}"); self.install_button.config(text="Installing..."); self.update_idletasks()
+            all_ok = all(self._install_single_optional(pkg) for pkg in missing); msg = "Add-on install complete." if all_ok else "Some failed."
+            func = messagebox.showinfo if all_ok else messagebox.showwarning; self.log_to_console(msg); func("Install Result", msg, parent=self)
+        self.install_button.config(state="normal", text="Install Add-ons")
+    def _install_single_optional(self, pkg):
+        self.log_to_console(f"Installing '{pkg}'..."); ok = self.install_package(pkg, self.log_to_console); self.log_to_console(f"'{pkg}' install {'OK' if ok else 'failed'}.")
+        if ok and pkg == "tkinterdnd2": self.log_to_console("Restart required for Drag & Drop.")
+        return ok
+    def run_dependency_checks(self):
+        print("[DEBUG] run dep checks (req)..."); self.log_to_console("Checking libraries...")
+        results = self.check_dependencies(self.log_to_console); missing = results['missing_required']
+        if missing:
+            if messagebox.askyesno("Libs Missing", f"Missing:\n{', '.join(missing)}\nInstall now?", parent=self):
+                if not all(self.install_package(p, self.log_to_console) for p in missing): messagebox.showerror("Error", "Failed to install required libs.", parent=self); self.destroy(); return
+                if self.check_dependencies(self.log_to_console)['missing_required']: messagebox.showerror("Error", "Libs not recognized after install.", parent=self); self.destroy(); return
+            else: messagebox.showerror("Cannot Run", "Cannot run without required libs.", parent=self); self.destroy(); return
+        print("[DEBUG] Required OK."); self.log_to_console("Libs ready. Please log in."); self.login_button.config(state="normal")
+        try: self.grab_set(); self.lift(); self.focus_force(); print("[DEBUG] Grab/lift/focus OK.")
+        except tk.TclError as e: print(f"[WARN] Grab/lift/focus failed: {e}")
+        print("[DEBUG] run dep checks finished.")
+    def _open_signup_window(self):
+        print("[DEBUG] Opening signup..."); self.update_idletasks(); login_geo = self.winfo_geometry(); parts = login_geo.split('+'); size_parts = parts[0].split('x')
+        login_w = int(size_parts[0]); login_x = int(parts[1]); login_y = int(parts[2]); signup_x = login_x + login_w + 10
+        dialog = SignupDialog(self, x=signup_x, y=login_y)
+        if hasattr(dialog, 'result') and dialog.result:
+            name, username, email, password = dialog.result['name'], dialog.result['username'], dialog.result['email'], dialog.result['password']
+            print(f"[DEBUG] Signup data: {name}, ID:{username}, Email:{email}"); self.log_to_console(f"Signing up: {name}({username})")
+            result = create_user(name, username, email, password)
+            if result is True: messagebox.showinfo("Signup OK", f"Welcome, {name}!\nPending admin approval.", parent=self); self.log_to_console("Signup request sent.")
+            else: err_map = {"duplicate_email": "Email exists.", "duplicate_username": "Username taken.", "invalid_email": "Invalid email.", "password_too_short": "Password min 6 chars."}; err_msg = err_map.get(result, f"Server Error: {result}" if isinstance(result, str) else "Unknown error."); messagebox.showerror("Signup Failed", err_msg, parent=self); self.log_to_console(f"Signup failed: {err_msg}")
+        else: print("[DEBUG] Signup cancelled.")
+    def attempt_login(self):
+        print("[DEBUG] attempt_login..."); username, password = self.username_entry.get(), self.password_entry.get()
+        if not (username and password): messagebox.showwarning("Login", "Enter username and password.", parent=self); return
+        print(f"Login attempt: ID='{username}'"); self.log_to_console(f"Logging in {username}..."); self.update_idletasks()
+        role_num = check_user_login(username, password); BANNED, PENDING, REGISTERED, PREMIUM, ADMIN = 0, 1, 2, 3, 4
+        if role_num is not None:
+            print(f"Login OK! Role: {role_num}"); allowed = [REGISTERED, PREMIUM, ADMIN]
+            if role_num in allowed:
+                role_map = {2:"reg", 3:"prem", 4:"admin"}; self.log_to_console(f"Login OK ({role_map.get(role_num, '?')})! Starting..."); self.update_idletasks()
+                self.dnd_available = "tkinterdnd2" in str(type(self.parent)); print(f"INFO: DND: {self.dnd_available}")
+                self.launch_main_app(self.parent)
+                try: self.destroy()
+                except Exception as e: print(f"[ERROR] Closing login win: {e}")
+            elif role_num == PENDING: self.log_to_console("Login failed: Pending approval."); messagebox.showinfo("Login Failed", "Account awaiting approval.", parent=self)
+            elif role_num == BANNED: self.log_to_console("Login failed: Banned."); messagebox.showerror("Login Failed", "Access denied.", parent=self)
+            else: self.log_to_console(f"Login failed: Unknown role ({role_num})."); messagebox.showerror("Login Error", f"Unknown role ({role_num}).", parent=self)
+        else: self.log_to_console("Login failed: Invalid credentials."); messagebox.showerror("Login Failed", "Invalid username or password.", parent=self)
+        print("[DEBUG] attempt_login finished.")
+    def on_close(self):
+        print("Login closed. Exiting.");
+        try: self.parent.destroy() if self.parent and self.parent.winfo_exists() else self.destroy()
+        except Exception as e: print(f"[ERROR] on_close: {e}")
+
+================================================================================
+
+(30) ui\theme.py
+--------------------------------------------------------------------------------
+# File path: ui/theme.py (NEW FILE)
+
+class Colors:
+    """
+    CiTRUS 프로젝트의 모든 UI에서 사용되는 중앙 색상 팔레트입니다.
+    """
+    # 테마 주요 색상
+    WHITE: str = "#ffffff"
+    MAIN_RED: str = "#eb6864"
+    DARKER_RED: str = "#d0504c"     # 호버/클릭 시
+    DARK_TEAL: str = "#1b3d42"      # 헤더, 라벨 텍스트
+
+    # 회색조
+    GREY: str = "#898989"
+    DARK_GREY: str = "#6c757d"      # 버튼 호버
+    SELECTED_BG: str = "#e0e0e0"    # 레이어 리스트 선택
+
+    # 텍스트 기본값
+    BLACK: str = "#000000"
+
+    # 추가된 색상 (기존 코드에서 사용된 것들)
+    LIGHTBLUE: str = "lightblue"    # 회전 핸들
+    BLUE: str = "blue"              # 리사이즈 핸들 테두리
+    DARK_TEAL_ACTIVE: str = "#133034" # 버튼 Active
+
+================================================================================
+
